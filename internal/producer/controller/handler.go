@@ -11,6 +11,7 @@ import (
 
 var logger = log.New(os.Stdout, "[Webhook Handler]: ", log.Llongfile|log.LstdFlags)
 
+// TODO: check for private repo and token.
 func HandleWebhook(ctx *fiber.Ctx) error {
 	event := ctx.Get("X-GitHub-Event")
 	body := ctx.Body()
