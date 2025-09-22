@@ -9,7 +9,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-var logger = log.New(os.Stdout, "[Webhook Handler]: ", log.Llongfile|log.LstdFlags)
+var logger = log.New(os.Stdout, "[Webhook Handler]: ", log.Lshortfile|log.LstdFlags)
 
 // TODO: check for private repo and token.
 func HandleWebhook(ctx *fiber.Ctx) error {

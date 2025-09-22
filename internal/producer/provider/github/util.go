@@ -9,7 +9,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 )
 
-var logger = log.New(os.Stdout, "[provider/github]: ", log.Llongfile|log.LstdFlags)
+var logger = log.New(os.Stdout, "[provider/github]: ", log.Lshortfile|log.LstdFlags)
 
 // ClonePullRequest clones the pull request repository to the specified directory.
 // this is used when an incoming pull request is received.

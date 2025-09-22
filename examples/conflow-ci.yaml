@@ -2,19 +2,23 @@ version: "0.1"
 provider:
   github:
     repository: "org/repo-name"
+    branch: "main"
     auth:
       token: "${GITHUB_TOKEN}"
 
 environment:
   # Variables shared across hosts
-  global_env:
+  global:
     - KEY=value
     - PATH=/usr/local/bin:$PATH
+  # Variable only on producer server
+  local:
+    - DIFF_KEY=value
 
 # Pool of available machines/servers
 hosts:
   - name: test-node-1
-    address: 192.168.1.101
+    address: 192.168.1.101:8871
     install: # Per-host software bootstrap
       - apt-get update
       - apt-get install -y bison flex
@@ -27,22 +31,24 @@ hosts:
     address: backup.test.example.com
 
 pipeline:
-  # build on initalization
+  # build on initalization after cloning the repository
   build:
     - name: build-workers
-      runs_on: ["test-node-1", "test-node-2", "test-node-3"] # Choose servers to run on
       steps:
-        - git clone https://github.com/${github.repository}.git
-        - cd /project && go build ./cmd
+        - cd /project
+        - go build ./cmd
   # run tasks in parallel, divide them between the hosts
   tasks:
     - name: test-project-with-pattern
       runs_on: ["test-node-1", "test-node-2", "test-node-3"]
-      tasks:
-        pattern: ".+_test.go" # regex expression
-        cmd: go test {file} # this will run each test file found using the pattern
+      pattern: ".+_test.go" # regex expression
+      cmd:
+        - go test {file} # this will run each test file found using the pattern
 
     - name: test-project-with-explicit-files
       runs_on: ["test-node-1", "test-node-2"]
+      parallel: false # run in parallel to other tasks, by default true.
+      depends_on: [test-project-with-pattern] # jobs the task cosumer depends on, required field if parallel is false.
       files: ["check_conn.sh", "permission_test.sh"] # relative to project root.
-      cmd: ./{file}
+      cmd:
+        - ./{file}

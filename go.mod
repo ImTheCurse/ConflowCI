@@ -7,6 +7,7 @@ toolchain go1.24.7
 require (
 	github.com/go-git/go-git/v5 v5.16.2
 	github.com/gofiber/fiber/v2 v2.52.9
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
