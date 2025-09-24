@@ -9,11 +9,11 @@ provider:
 environment:
   # Variables shared across hosts
   global:
-    - KEY=value
-    - PATH=/usr/local/bin:$PATH
+    KEY: value
+    PATH: /usr/local/bin:$PATH
   # Variable only on producer server
   local:
-    - DIFF_KEY=value
+    DIFF_KEY: value
 
 # Pool of available machines/servers
 hosts:
@@ -33,10 +33,10 @@ hosts:
 pipeline:
   # build on initalization after cloning the repository
   build:
-    - name: build-workers
-      steps:
-        - cd /project
-        - go build ./cmd
+    name: build-workers
+    steps:
+      - cd /project
+      - go build ./cmd
   # run tasks in parallel, divide them between the hosts
   tasks:
     - name: test-project-with-pattern

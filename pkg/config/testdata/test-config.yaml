@@ -1,0 +1,33 @@
+provider:
+  github:
+    repository: "org/repo-name"
+    branch: "main"
+    auth:
+      token: "${GITHUB_TOKEN}"
+
+hosts:
+  - name: test-node-1
+    address: 192.168.1.101:8871
+  - name: test-node-2
+    address: test.example.com
+
+environment:
+  # Variables shared across hosts
+  global:
+    KEY: value
+    PATH: /usr/local/bin:$PATH
+  # Variable only on producer server
+  local:
+    DIFF_KEY: value
+
+pipeline:
+  build:
+    name: build-app
+    steps:
+      - go build ./cmd
+  tasks:
+    - name: run-tests
+      runs_on: ["test-node-1", "test-node-2"]
+      pattern: ".+_test.go"
+      cmd:
+        - go test {file}

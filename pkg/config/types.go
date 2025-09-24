@@ -1,10 +1,10 @@
 package config
 
 type Config struct {
-	Provider Provider    `yaml:"provider"`             // provider configuration
-	Env      *Enviorment `yaml:"enviorment,omitempty"` // enviorment variables shared across hosts
-	Hosts    []Host      `yaml:"hosts"`                // pool of available machines/servers
-	Pipeline Pipeline    `yaml:"pipeline"`             // task pipeline
+	Provider Provider     `yaml:"provider"`              // provider configuration
+	Env      *Environment `yaml:"environment,omitempty"` // enviorment variables shared across hosts
+	Hosts    []Host       `yaml:"hosts"`                 // pool of available machines/servers
+	Pipeline Pipeline     `yaml:"pipeline"`              // task pipeline
 }
 
 type Provider struct {
@@ -21,9 +21,9 @@ type Auth struct {
 	Token string `yaml:"token"` // PAT token
 }
 
-type Enviorment struct {
-	GlobalEnv *[]string `yaml:"global,omitempty"` // variables shared across hosts
-	LocalEnv  *[]string `yaml:"local,omitempty"`  // variable only on producer server
+type Environment struct {
+	GlobalEnv map[string]string `yaml:"global,omitempty"` // variables shared across hosts
+	LocalEnv  map[string]string `yaml:"local,omitempty"`  // variable only on producer server
 }
 
 type Host struct {
