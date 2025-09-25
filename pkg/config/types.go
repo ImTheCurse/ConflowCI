@@ -56,3 +56,8 @@ type TaskConsumerJobs struct {
 	// Option B: build by explictly specifying files.
 	File []string `yaml:"files,omitempty"`
 }
+
+type ValidatedConfig struct {
+	*Config
+	endpoints []EndpointInfo
+}

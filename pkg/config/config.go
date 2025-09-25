@@ -10,9 +10,10 @@ import (
 
 var logger = log.New(os.Stdout, "[Config Parser]: ", log.Lshortfile|log.LstdFlags)
 
-// NewConfig creates a new Config instance from a YAML file, the function also expands environment variables for the Enviornmet
+// NewConfig creates a new validated Config instance from a YAML file,
+// the function also expands environment variables for the Enviornmet
 // field and the auth field in the github provider.
-func NewConfig(filename string) (*Config, error) {
+func NewConfig(filename string) (*ValidatedConfig, error) {
 	cfg := &Config{}
 
 	b, err := os.ReadFile(filename)
@@ -29,5 +30,15 @@ func NewConfig(filename string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	return cfg, err
+	cfg.ValidatePipeline()
+	cfg.ValidateProvider()
+	eps, err := cfg.ValidateParseHosts()
+	if err != nil {
+		return nil, err
+	}
+	validatedCfg := &ValidatedConfig{
+		Config:    cfg,
+		endpoints: eps,
+	}
+	return validatedCfg, err
 }

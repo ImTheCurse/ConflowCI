@@ -86,7 +86,7 @@ func TestProviderValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.config.Provider.ValidateProvider()
+			err := tt.config.ValidateProvider()
 
 			if !tt.expectError && err != nil {
 				t.Errorf("Unexpected error, got: %v", err.Error())

@@ -20,18 +20,17 @@ func (cfg *Config) GetCloneURL() string {
 	return cloneURL
 }
 
-func (provider *Provider) ValidateProvider() error {
-	if len(provider.Github.Repository) <= 0 {
+func (cfg *Config) ValidateProvider() error {
+	if len(cfg.Provider.Github.Repository) <= 0 {
 		return ErrInvalidRepoName
 	}
-	if len(provider.Github.Branch) <= 0 {
+	if len(cfg.Provider.Github.Branch) <= 0 {
 		return ErrInvalidBranchName
 	}
-	if provider.Github.Auth != nil {
-		if len(provider.Github.Auth.Token) <= 0 {
+	if cfg.Provider.Github.Auth != nil {
+		if len(cfg.Provider.Github.Auth.Token) <= 0 {
 			return ErrInvalidPersonalAccessToken
 		}
 	}
-
 	return nil
 }
