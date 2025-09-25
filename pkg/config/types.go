@@ -45,9 +45,10 @@ type TaskConsumerJobs struct {
 	RunsOn []string `yaml:"runs_on"` // array of machines the job will run on
 
 	// if the job runs in parallel to other tasks, set by default to true. if false, the consumer waits for dependents task to finish.
-	RunsInParallel *bool     `yaml:"parallel,omitempty"`
-	Commands       []string  `yaml:"cmd"`                  // commands to run
-	DependsOn      *[]string `yaml:"depends_on,omitempty"` // on what task does this job depends on
+	// we use a pointer since we want to default it to true and we need to know if the field was set.
+	RunsInParallel *bool    `yaml:"parallel,omitempty"`
+	Commands       []string `yaml:"cmd"`                  // commands to run
+	DependsOn      []string `yaml:"depends_on,omitempty"` // on what tasks does this job depends on
 
 	//Option A: build by regex pattern
 	Pattern string `yaml:"pattern,omitempty"`
