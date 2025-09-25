@@ -54,7 +54,7 @@ func TestProviderValidation(t *testing.T) {
 				},
 			},
 			expectError: true,
-			err:         ErrEmptyPAToken,
+			err:         ErrInvalidPersonalAccessToken,
 		},
 		{
 			name: "invalid-test-without-repo",
@@ -67,7 +67,7 @@ func TestProviderValidation(t *testing.T) {
 				},
 			},
 			expectError: true,
-			err:         ErrEmptyRepository,
+			err:         ErrInvalidRepoName,
 		},
 		{
 			name: "invalid-test-without-branch",
@@ -80,7 +80,7 @@ func TestProviderValidation(t *testing.T) {
 				},
 			},
 			expectError: true,
-			err:         ErrEmptyBranch,
+			err:         ErrInvalidBranchName,
 		},
 	}
 

@@ -15,15 +15,15 @@ environment:
   local:
     DIFF_KEY: value
 
-# Pool of available machines/servers
+# Pool of available machines/servers that you can ssh into
 hosts:
   - name: test-node-1
-    address: 192.168.1.101:8871
+    address: test@192.168.1.101:22
     install: # Per-host software bootstrap
       - apt-get update
       - apt-get install -y bison flex
   - name: test-node-2
-    address: test.example.com # Can be a local or publicly accessible address
+    address: test@test.example.com # Can be a local or publicly accessible address
     install:
       - apt-get update
       - apt-get install -y docker git make

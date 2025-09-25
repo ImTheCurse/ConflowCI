@@ -5,9 +5,9 @@ import (
 	"fmt"
 )
 
-var ErrEmptyPAToken = errors.New("Empty Personal Access Token")
-var ErrEmptyBranch = errors.New("Empty branch name")
-var ErrEmptyRepository = errors.New("Empty repository name")
+var ErrInvalidPersonalAccessToken = errors.New("Empty Personal Access Token")
+var ErrInvalidBranchName = errors.New("Empty branch name")
+var ErrInvalidRepoName = errors.New("Empty repository name")
 
 func (cfg *Config) GetCloneURL() string {
 	repo := cfg.Provider.Github.Repository
@@ -22,14 +22,14 @@ func (cfg *Config) GetCloneURL() string {
 
 func (provider *Provider) ValidateProvider() error {
 	if len(provider.Github.Repository) <= 0 {
-		return ErrEmptyRepository
+		return ErrInvalidRepoName
 	}
 	if len(provider.Github.Branch) <= 0 {
-		return ErrEmptyBranch
+		return ErrInvalidBranchName
 	}
 	if provider.Github.Auth != nil {
 		if len(provider.Github.Auth.Token) <= 0 {
-			return ErrEmptyPAToken
+			return ErrInvalidPersonalAccessToken
 		}
 	}
 
