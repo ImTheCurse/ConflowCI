@@ -25,17 +25,19 @@ func NewConfig(filename string) (*ValidatedConfig, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't parse config file, make sure the config file has valid yaml format and required fields exist.")
 	}
-
+	logger.Println("Config file parsed successfully, expanding env...")
 	err = cfg.expandEnv()
 	if err != nil {
 		return nil, err
 	}
+	logger.Println("Expanded env, validating config fields...")
 	cfg.ValidatePipeline()
 	cfg.ValidateProvider()
 	eps, err := cfg.ValidateParseHosts()
 	if err != nil {
 		return nil, err
 	}
+	logger.Println("Finished config validation.")
 	validatedCfg := &ValidatedConfig{
 		Config:    cfg,
 		endpoints: eps,
