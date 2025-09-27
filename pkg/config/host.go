@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"os"
 	"os/user"
 	"strconv"
 	"strings"
@@ -44,6 +45,22 @@ func (cfg *Config) ValidateParseHosts() ([]EndpointInfo, error) {
 	return endpoints, nil
 }
 
+// Expands the relative path for each host, returns an error if the file path dosen't exist.
+func (cfg *Config) ExpandPrivKeyPath() error {
+	for i, host := range cfg.Hosts {
+		keyPath := host.PrivateKeyPath
+		realPath := os.ExpandEnv(keyPath)
+
+		if _, err := os.Stat(realPath); os.IsNotExist(err) {
+			return fmt.Errorf("private key file %s for host %s does not exist", realPath, host.Name)
+		}
+
+		cfg.Hosts[i].PrivateKeyPath = realPath
+	}
+	return nil
+}
+
+// Parses a host string into an EndpointInfo struct.
 func parseHost(host string) (EndpointInfo, error) {
 	ep := EndpointInfo{}
 	sepUser := strings.Split(host, "@")
@@ -74,6 +91,7 @@ func parseHost(host string) (EndpointInfo, error) {
 	return ep, nil
 }
 
+// Validates the configuration for the endpoint.
 func ValidateEndpoint(ep EndpointInfo) error {
 	if ep.User == "" {
 		return ErrInvalidUser

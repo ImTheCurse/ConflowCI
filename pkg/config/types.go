@@ -27,9 +27,10 @@ type Environment struct {
 }
 
 type Host struct {
-	Name         string    `yaml:"name"`              // host human readable name
-	Address      string    `yaml:"address"`           // local/public accesible address
-	InstallSteps *[]string `yaml:"install,omitempty"` // Bootstraping host machine
+	Name           string    `yaml:"name"`              // host human readable name
+	Address        string    `yaml:"address"`           // local/public accesible address
+	PrivateKeyPath string    `yaml:"private_key_path"`  // path to private key for SSH authentication
+	InstallSteps   *[]string `yaml:"install,omitempty"` // Bootstraping host machine
 }
 
 type Pipeline struct {

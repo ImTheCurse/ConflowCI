@@ -26,7 +26,6 @@ var ep config.EndpointInfo = config.EndpointInfo{
 func CreateConfig() (*ssh.ClientConfig, error) {
 	sshCfg := SSHConnConfig{
 		Username:       ep.User,
-		Password:       "testpass",
 		PrivateKeyPath: "keys/id_rsa",
 	}
 	cfg, err := sshCfg.BuildConfig()

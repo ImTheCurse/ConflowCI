@@ -30,6 +30,10 @@ func NewConfig(filename string) (*ValidatedConfig, error) {
 	if err != nil {
 		return nil, err
 	}
+	err = cfg.ExpandPrivKeyPath()
+	if err != nil {
+		return nil, err
+	}
 	logger.Println("Expanded env, validating config fields...")
 	cfg.ValidatePipeline()
 	cfg.ValidateProvider()

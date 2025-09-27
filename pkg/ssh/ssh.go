@@ -18,12 +18,14 @@ var ErrPrivKetFileNotFound = errors.New("Public key file was not found")
 var ErrPrivateKeyParse = errors.New("Private key file could not be parsed")
 var ErrEmptyPrivKeyPath = errors.New("Private key path is empty")
 
+// Configuration for creating an ssh connection.
 type SSHConnConfig struct {
 	Username       string
-	Password       string
 	PrivateKeyPath string
 }
 
+// BuildConfig builds a new SSH client configuration using username, and a path to
+// the private key that the SSH server authenticates against.
 func (s SSHConnConfig) BuildConfig() (*ssh.ClientConfig, error) {
 	if len(s.PrivateKeyPath) > 0 {
 		key, err := os.ReadFile(s.PrivateKeyPath)
@@ -57,6 +59,9 @@ func (s SSHConnConfig) BuildConfig() (*ssh.ClientConfig, error) {
 	}
 }
 
+// Creates a new SSH connection using the provided configuration.
+// you need to have an SSH config. you can use the ssh.BuildConfig function
+// in order create it.
 func NewSSHConn(ep config.EndpointInfo, cfg *ssh.ClientConfig) (*ssh.Client, error) {
 	addr := fmt.Sprintf("%s:%d", ep.Host, ep.Port)
 	logger.Println("Starting SSH connection")

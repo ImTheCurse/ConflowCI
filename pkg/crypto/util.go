@@ -13,6 +13,7 @@ import (
 
 var logger = log.New(os.Stdout, "[Crypto]: ", log.Lshortfile|log.LstdFlags)
 
+// GenerateKeys generates a new RSA key pair and saves them to files.
 func GenerateKeys() ([]byte, []byte, error) {
 	if err := os.MkdirAll("keys", 0700); err != nil {
 		return nil, nil, err
