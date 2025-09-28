@@ -18,11 +18,13 @@ func (i InvalidAddressFormat) Error() string {
 		i.address)
 }
 
-var ErrInvalidHost = errors.New("Empty host name")
+var ErrInvalidHost = errors.New("Empty host address")
 var ErrInvalidPortNum = errors.New("Empty port number")
 var ErrInvalidUser = errors.New("Empty username")
+var ErrInvalidHostName = errors.New("Empty host name")
 
 type EndpointInfo struct {
+	Name string //matches the name of the host in the config's Host
 	User string
 	Host string
 	Port uint16
@@ -32,6 +34,7 @@ func (cfg *Config) ValidateParseHosts() ([]EndpointInfo, error) {
 	endpoints := []EndpointInfo{}
 	for _, host := range cfg.Hosts {
 		ep, err := parseHost(host.Address)
+		ep.Name = host.Name
 		if err != nil {
 			return []EndpointInfo{}, err
 		}
@@ -101,6 +104,9 @@ func ValidateEndpoint(ep EndpointInfo) error {
 	}
 	if ep.Port == 0 {
 		return ErrInvalidPortNum
+	}
+	if ep.Name == "" {
+		return ErrInvalidHostName
 	}
 	return nil
 }

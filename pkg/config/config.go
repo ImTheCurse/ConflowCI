@@ -44,7 +44,7 @@ func NewConfig(filename string) (*ValidatedConfig, error) {
 	logger.Println("Finished config validation.")
 	validatedCfg := &ValidatedConfig{
 		Config:    cfg,
-		endpoints: eps,
+		Endpoints: eps,
 	}
 	return validatedCfg, err
 }

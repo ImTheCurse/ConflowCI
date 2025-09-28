@@ -60,5 +60,5 @@ type TaskConsumerJobs struct {
 
 type ValidatedConfig struct {
 	*Config
-	endpoints []EndpointInfo
+	Endpoints []EndpointInfo
 }
