@@ -15,10 +15,11 @@ import (
 )
 
 var Ep config.EndpointInfo = config.EndpointInfo{
-	Name: "container-node",
-	User: "linuxserver.io",
-	Host: "localhost",
-	Port: 2222,
+	Name:           "container-node",
+	User:           "linuxserver.io",
+	Host:           "localhost",
+	Port:           2222,
+	PrivateKeyPath: "keys/id_rsa",
 }
 
 func CreateConfig() (*ssh.ClientConfig, error) {

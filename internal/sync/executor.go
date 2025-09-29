@@ -2,8 +2,6 @@ package sync
 
 import (
 	"fmt"
-	"log"
-	"os"
 	"slices"
 	"strings"
 
@@ -12,32 +10,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-var logger = log.New(os.Stdout, "[Sync]: ", log.Lshortfile|log.LstdFlags)
-
-// Current state of a task.
-type SyncState uint
-
-const (
-	StartingTask SyncState = iota
-	RunningTask
-	CompletedTask
-	ErrorInTask
-)
-
-const buildPath string = "/home/conflowci/build"
-
-// TaskDispatcher represents a task syncing for remote machines
-// it tracks each state of the task, and is responsible for dispatching tasks
-// to remote machines.
-// It does the dispatching after the project is already built
-type TaskDispatcher struct {
-	TaskID uuid.UUID
-	State  SyncState
-	RunsOn []config.EndpointInfo
-	Files  []string
-}
-
-func NewTaskDispatcher(conn *ssh.Client, cfg config.ValidatedConfig, task config.TaskConsumerJobs) (*TaskDispatcher, error) {
+func NewTaskExecutor(conn *ssh.Client, cfg config.ValidatedConfig, task config.TaskConsumerJobs) (*TaskExecutor, error) {
 	files := []string{}
 	var err error
 	if task.File == nil {
@@ -48,12 +21,24 @@ func NewTaskDispatcher(conn *ssh.Client, cfg config.ValidatedConfig, task config
 	} else {
 		files = task.File
 	}
-	return &TaskDispatcher{
-		TaskID: uuid.New(),
-		State:  StartingTask,
-		RunsOn: getTasksMachine(cfg, task),
-		Files:  files,
+	ch := make(chan string, len(files))
+	for _, cmd := range task.Commands {
+		for _, file := range files {
+			expandedCmd := strings.ReplaceAll(cmd, "{file}", file)
+			ch <- expandedCmd
+		}
+	}
+	close(ch)
+	return &TaskExecutor{
+		TaskID:      uuid.New(),
+		State:       StartingTask,
+		RunsOn:      getTasksMachine(cfg, task),
+		Files:       files,
+		CmdQueue:    ch,
+		OutputQueue: make(chan string, 10_000),
+		ErrorQueue:  make(chan error, 10_000),
 	}, err
+
 }
 
 func getTasksMachine(cfg config.ValidatedConfig, task config.TaskConsumerJobs) []config.EndpointInfo {
@@ -73,7 +58,7 @@ func getFilesByRegex(conn *ssh.Client, expr string, buildDir string) ([]string, 
 	}
 	defer s.Close()
 
-	cmd := fmt.Sprintf("find %s -regex %q", buildDir, expr)
+	cmd := fmt.Sprintf("find %s -regextype posix-extended -regex %q", buildDir, expr)
 	out, err := s.CombinedOutput(cmd)
 	if err != nil {
 		logger.Printf("Error running getFilesByRegex, output: %s", string(out))

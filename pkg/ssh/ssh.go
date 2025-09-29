@@ -1,28 +1,13 @@
 package ssh
 
 import (
-	"errors"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/ImTheCurse/ConflowCI/pkg/config"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/knownhosts"
 )
-
-var logger = log.New(os.Stdout, "[SSH]: ", log.Lshortfile|log.LstdFlags)
-
-var ErrNotSupported = errors.New("Authentication method not supported")
-var ErrPrivKetFileNotFound = errors.New("Public key file was not found")
-var ErrPrivateKeyParse = errors.New("Private key file could not be parsed")
-var ErrEmptyPrivKeyPath = errors.New("Private key path is empty")
-
-// Configuration for creating an ssh connection.
-type SSHConnConfig struct {
-	Username       string
-	PrivateKeyPath string
-}
 
 // BuildConfig builds a new SSH client configuration using username, and a path to
 // the private key that the SSH server authenticates against.

@@ -1,7 +1,6 @@
 package config
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"os/user"
@@ -9,32 +8,12 @@ import (
 	"strings"
 )
 
-type InvalidAddressFormat struct {
-	address string
-}
-
-func (i InvalidAddressFormat) Error() string {
-	return fmt.Sprintf("Invalid address format, expected ssh address format '[user@]address[:][port]' but got %s",
-		i.address)
-}
-
-var ErrInvalidHost = errors.New("Empty host address")
-var ErrInvalidPortNum = errors.New("Empty port number")
-var ErrInvalidUser = errors.New("Empty username")
-var ErrInvalidHostName = errors.New("Empty host name")
-
-type EndpointInfo struct {
-	Name string //matches the name of the host in the config's Host
-	User string
-	Host string
-	Port uint16
-}
-
 func (cfg *Config) ValidateParseHosts() ([]EndpointInfo, error) {
 	endpoints := []EndpointInfo{}
 	for _, host := range cfg.Hosts {
 		ep, err := parseHost(host.Address)
 		ep.Name = host.Name
+		ep.PrivateKeyPath = host.PrivateKeyPath
 		if err != nil {
 			return []EndpointInfo{}, err
 		}
@@ -107,6 +86,9 @@ func ValidateEndpoint(ep EndpointInfo) error {
 	}
 	if ep.Name == "" {
 		return ErrInvalidHostName
+	}
+	if ep.PrivateKeyPath == "" {
+		return ErrInvalidPrivateKeyPath
 	}
 	return nil
 }

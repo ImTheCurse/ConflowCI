@@ -79,22 +79,25 @@ func TestGetTasksMachine(t *testing.T) {
 	// Setup test data
 	endpoints := []config.EndpointInfo{
 		{
-			Name: "test-node-1",
-			User: "testuser",
-			Host: "192.168.1.101",
-			Port: 8871,
+			Name:           "test-node-1",
+			User:           "testuser",
+			Host:           "192.168.1.101",
+			Port:           8871,
+			PrivateKeyPath: "/path",
 		},
 		{
-			Name: "test-node-2",
-			User: "testuser",
-			Host: "test.example.com",
-			Port: 22,
+			Name:           "test-node-2",
+			User:           "testuser",
+			Host:           "test.example.com",
+			Port:           22,
+			PrivateKeyPath: "/path",
 		},
 		{
-			Name: "test-node-3",
-			User: "testuser",
-			Host: "another.example.com",
-			Port: 2222,
+			Name:           "test-node-3",
+			User:           "testuser",
+			Host:           "another.example.com",
+			Port:           2222,
+			PrivateKeyPath: "/path",
 		},
 	}
 

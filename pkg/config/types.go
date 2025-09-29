@@ -1,5 +1,12 @@
 package config
 
+import (
+	"log"
+	"os"
+)
+
+var logger = log.New(os.Stdout, "[Config Parser]: ", log.Lshortfile|log.LstdFlags)
+
 type Config struct {
 	Provider Provider     `yaml:"provider"`              // provider configuration
 	Env      *Environment `yaml:"environment,omitempty"` // enviorment variables shared across hosts
@@ -61,4 +68,12 @@ type TaskConsumerJobs struct {
 type ValidatedConfig struct {
 	*Config
 	Endpoints []EndpointInfo
+}
+
+type EndpointInfo struct {
+	Name           string //matches the name of the host in the config's Host
+	User           string
+	Host           string
+	Port           uint16
+	PrivateKeyPath string // path to private key for SSH authentication
 }

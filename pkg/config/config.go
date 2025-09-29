@@ -2,13 +2,10 @@ package config
 
 import (
 	"fmt"
-	"log"
 	"os"
 
 	"gopkg.in/yaml.v3"
 )
-
-var logger = log.New(os.Stdout, "[Config Parser]: ", log.Lshortfile|log.LstdFlags)
 
 // NewConfig creates a new validated Config instance from a YAML file,
 // the function also expands environment variables for the Enviornmet
