@@ -10,6 +10,9 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+// Creates a new task executor, the task executor is responsible for executing tasks on a remote machine
+// it dispatches each cmd with file/pattern to a remote machine in a concurrent way using the RunTaskOnAllMachines func.
+// there is no guarantee that the commands will be executed in the order they were dispatched.
 func NewTaskExecutor(conn *ssh.Client, cfg config.ValidatedConfig, task config.TaskConsumerJobs) (*TaskExecutor, error) {
 	files := []string{}
 	var err error
@@ -41,6 +44,7 @@ func NewTaskExecutor(conn *ssh.Client, cfg config.ValidatedConfig, task config.T
 
 }
 
+// getTasksMachine returns the list of endpoints that the task should be executed on.
 func getTasksMachine(cfg config.ValidatedConfig, task config.TaskConsumerJobs) []config.EndpointInfo {
 	res := []config.EndpointInfo{}
 	for _, ep := range cfg.Endpoints {
@@ -51,6 +55,8 @@ func getTasksMachine(cfg config.ValidatedConfig, task config.TaskConsumerJobs) [
 	return res
 }
 
+// getFilesByRegex returns the list of files that match the given regex expression.
+// it uses posix-extended flavor of regex.
 func getFilesByRegex(conn *ssh.Client, expr string, buildDir string) ([]string, error) {
 	s, err := conn.NewSession()
 	if err != nil {

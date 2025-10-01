@@ -53,6 +53,3 @@ type TaskExecutor struct {
 	OutputQueue chan string // TODO: change this to a message queue.
 	ErrorQueue  chan error  // TODO: change this into a message queue.
 }
-
-type CommandConsumer struct {
-}

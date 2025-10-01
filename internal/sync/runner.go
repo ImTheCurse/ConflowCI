@@ -6,6 +6,7 @@ import (
 	goSSH "golang.org/x/crypto/ssh"
 )
 
+// RunTaskOnAllMachines distributes tasks across all endpoints
 func (te *TaskExecutor) RunTaskOnAllMachines() []error {
 	te.State = RunningTask
 	logger.Printf("%s: with id: %s", te.State.String(), te.TaskID)
@@ -32,6 +33,8 @@ func (te *TaskExecutor) RunTaskOnAllMachines() []error {
 	return []error{}
 }
 
+// commandConsumer receives and endpoint and pulls a cmd from the queue
+// and executes it on its endpoint.
 func commandConsumer(ep *config.EndpointInfo, taskState *TaskState,
 	cmdQueue chan string, outputQueue chan<- string, errorQueue chan<- error, done chan<- bool) {
 
@@ -64,7 +67,7 @@ func commandConsumer(ep *config.EndpointInfo, taskState *TaskState,
 			break
 		}
 		defer s.Close()
-		o, err := runCommandOnRemoteMachine(s, ep, cmd)
+		o, err := runCommandOnRemoteMachine(s, cmd)
 
 		if err != nil {
 			logger.Printf("Error running command: %v", err)
@@ -80,7 +83,8 @@ func commandConsumer(ep *config.EndpointInfo, taskState *TaskState,
 	done <- true
 }
 
-func runCommandOnRemoteMachine(s *goSSH.Session, ep *config.EndpointInfo, cmd string) (string, error) {
+// runCommandOnRemoteMachine executes a command on the endpoint's machine.
+func runCommandOnRemoteMachine(s *goSSH.Session, cmd string) (string, error) {
 	b, err := s.CombinedOutput(cmd)
 	output := string(b)
 	return output, err
