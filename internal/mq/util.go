@@ -15,7 +15,7 @@ func CreateMessageQueueContainer() (testcontainers.Container, string, error) {
 	// Start RabbitMQ container
 	req := testcontainers.ContainerRequest{
 		Image:        "rabbitmq:3.12-management",
-		ExposedPorts: []string{"5672/tcp", "14351/tcp"}, // random ports to avoid port collision with potential another mq
+		ExposedPorts: []string{"5672/tcp", "14351/tcp"},
 		WaitingFor: wait.ForListeningPort("5672/tcp").
 			WithStartupTimeout(30 * time.Second),
 	}
