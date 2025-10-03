@@ -3,8 +3,15 @@ package mq
 import (
 	"context"
 	"fmt"
+	"os"
+	"strconv"
+	"sync"
 	"testing"
 	"time"
+
+	"github.com/ImTheCurse/ConflowCI/pkg/crypto"
+	conflowSSH "github.com/ImTheCurse/ConflowCI/pkg/ssh"
+	"golang.org/x/crypto/ssh"
 )
 
 func TestMessageQueue(t *testing.T) {
@@ -16,6 +23,36 @@ func TestMessageQueue(t *testing.T) {
 	}
 	defer c.Terminate(ctx)
 	logger.Printf("Container RabbitMQ created")
+
+	pub, _, err := crypto.GenerateKeys()
+	if err != nil {
+		t.Errorf("Failed to generate keys: %v", err)
+	}
+	defer os.RemoveAll("keys")
+
+	container, err := conflowSSH.CreateSSHServerContainer(string(pub))
+	if err != nil {
+		t.Errorf("Failed to start SSH server container: %v", err)
+	}
+	fmt.Println("SSH server running at", conflowSSH.Ep.Host, conflowSSH.Ep.Port)
+	defer container.Terminate(ctx)
+
+	port := strconv.Itoa(int(conflowSSH.Ep.Port))
+	err = conflowSSH.AddHostKeyToKnownHosts(conflowSSH.Ep.Host, port)
+	if err != nil {
+		t.Errorf("Failed to add host key to known hosts: %v", err)
+	}
+
+	cfg, err := conflowSSH.CreateConfig()
+	if err != nil {
+		t.Errorf("Failed to create SSH config: %v", err)
+	}
+
+	conn, err := conflowSSH.NewSSHConn(conflowSSH.Ep, cfg)
+	if err != nil {
+		t.Errorf("Failed to create SSH connection: %v", err)
+	}
+	defer conn.Close()
 
 	logger.Printf("Creating Publisher")
 
@@ -51,24 +88,29 @@ func TestMessageQueue(t *testing.T) {
 	ctx, cancelCtx := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelCtx()
 
+	wg := sync.WaitGroup{}
+	wg.Add(1)
 	done := make(chan error, 1)
-	handler := func(msg []byte) error {
+	handler := func(msg []byte, _ *ssh.Session) (string, error) {
 		recievedMsg := string(msg)
 		if recievedMsg == m {
 			logger.Printf("Received message: %s", recievedMsg)
 			done <- nil
-			return nil
+			return recievedMsg, nil
 		}
 		done <- fmt.Errorf("Expected message: %s got: %s", m, recievedMsg)
-		return nil
+		return "", fmt.Errorf("Expected message: %s got: %s", m, recievedMsg)
 	}
 	logger.Printf("Starting Consumption")
-	go consumer.Consume(ctx, QueueNameOutput, handler)
-	if err := p.Publish(ctx, RoutingKeyOutputQueue, []byte(m)); err != nil {
+
+	go consumer.ConsumeCommand(ctx, &wg, conn, handler)
+
+	if err := p.Publish(ctx, RoutingKeyCmdQueue, []byte(m)); err != nil {
 		t.Errorf("Failed to publish message: %v", err)
 	}
 	logger.Printf("Published message")
-	// Wait for handler or timeout
+
+	wg.Wait()
 	select {
 	case err := <-done:
 		if err != nil {

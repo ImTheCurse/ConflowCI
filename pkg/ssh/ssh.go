@@ -32,6 +32,7 @@ func (s SSHConnConfig) BuildConfig() (*ssh.ClientConfig, error) {
 		if err != nil {
 			return nil, err
 		}
+		logger.Println("Built SSH config.")
 		return &ssh.ClientConfig{
 			User: s.Username,
 			Auth: []ssh.AuthMethod{

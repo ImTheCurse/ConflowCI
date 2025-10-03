@@ -45,11 +45,11 @@ const buildPath string = "$HOME/conflowci/build"
 // to remote machines.
 // It does the dispatching after the project is already built
 type TaskExecutor struct {
-	TaskID      uuid.UUID
-	State       TaskState
-	RunsOn      []config.EndpointInfo
-	Files       []string
-	CmdQueue    chan string // TODO: change this into a message queue.
-	OutputQueue chan string // TODO: change this to a message queue.
-	ErrorQueue  chan error  // TODO: change this into a message queue.
+	TaskID  uuid.UUID
+	State   TaskState
+	RunsOn  []config.EndpointInfo
+	Files   []string
+	Cmds    []string
+	Outputs []string
+	Errors  []string
 }

@@ -2,12 +2,17 @@ package mq
 
 import (
 	"context"
+	"sync"
 
 	amqp "github.com/rabbitmq/amqp091-go"
+	"golang.org/x/crypto/ssh"
 )
 
 // NewConsumer sets up a consumer bound to an exchange and queue
 func NewConsumer(amqpURL string, exchangeName string, params ConsumerParams, tag string) (*Consumer, error) {
+	if amqpURL == "" {
+		amqpURL = "amqp://guest:guest@localhost:5672/"
+	}
 	conn, err := amqp.Dial(amqpURL)
 	if err != nil {
 		return nil, ConnectionError{msg: err.Error()}
@@ -70,18 +75,27 @@ func NewConsumer(amqpURL string, exchangeName string, params ConsumerParams, tag
 		}
 	}
 
+	// we create a publisher in order to send the output / error back to the message queue.
+	p, err := NewPublisher(amqpURL, exchangeName)
+	if err != nil {
+		return nil, err
+	}
+	logger.Println("Created mq.Consumer Instance.")
 	return &Consumer{
 		conn:         conn,
 		channel:      ch,
+		publisher:    p,
 		exchangeName: exchangeName,
 		tag:          tag,
 	}, nil
 }
 
-// Consume starts consuming
-func (c *Consumer) Consume(ctx context.Context, queue string, handler func([]byte) error) error {
+// ConsumeCommand starts consuming
+func (c *Consumer) ConsumeCommand(ctx context.Context, wg *sync.WaitGroup,
+	client *ssh.Client, handler func([]byte, *ssh.Session) (string, error)) error {
+	logger.Println("Consuming command queue.")
 	msgs, err := c.channel.Consume(
-		queue,
+		QueueNameCmd,
 		c.tag,
 		false, // manual ack
 		false,
@@ -99,16 +113,61 @@ func (c *Consumer) Consume(ctx context.Context, queue string, handler func([]byt
 			if !ok {
 				return nil
 			}
-			if err := handler(d.Body); err != nil {
+			s, err := client.NewSession()
+			if err != nil {
 				_ = d.Nack(false, true) // requeue on error
 				continue
 			}
+			defer s.Close()
+			o, err := handler(d.Body, s) // error here is a cmd error
+			if err != nil {
+				err = c.publisher.Publish(ctx, RoutingKeyErrorOutputQueue, []byte(o)) // send message to error queue if the cmd failed.
+				if err != nil {
+					logger.Printf("failed to publish error message: %v, with error: %v", o, err)
+				}
+			} else {
+				err = c.publisher.Publish(ctx, RoutingKeyOutputQueue, []byte(o)) // send output with no error to output queue.
+				if err != nil {
+					logger.Printf("failed to publish message: %v, with error: %v", o, err)
+				}
+			}
+			wg.Done()
 			_ = d.Ack(false)
 		case <-ctx.Done():
-			return ctx.Err()
+			return nil
 		}
 	}
 }
+
+func (c *Consumer) ConsumeQueueContents(wg *sync.WaitGroup, done chan struct{}, queueName string, buf *[]string, e *error) {
+	msgs, err := c.channel.Consume(
+		queueName,
+		c.tag,
+		false, // manual ack
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		*e = err
+		return
+	}
+
+	for {
+		select {
+		case d, ok := <-msgs:
+			if ok {
+				*buf = append(*buf, string(d.Body))
+				wg.Done()
+				_ = d.Ack(false)
+			}
+		case <-done:
+			return
+		}
+	}
+}
+
 func (c *Consumer) Close() {
 	if c.channel != nil {
 		_ = c.channel.Close()
@@ -116,4 +175,5 @@ func (c *Consumer) Close() {
 	if c.conn != nil {
 		_ = c.conn.Close()
 	}
+	c.publisher.Close()
 }

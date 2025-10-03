@@ -24,22 +24,23 @@ func NewTaskExecutor(conn *ssh.Client, cfg config.ValidatedConfig, task config.T
 	} else {
 		files = task.File
 	}
-	ch := make(chan string, len(files))
+	cmds := []string{}
 	for _, cmd := range task.Commands {
 		for _, file := range files {
 			expandedCmd := strings.ReplaceAll(cmd, "{file}", file)
-			ch <- expandedCmd
+			cmds = append(cmds, expandedCmd)
 		}
 	}
-	close(ch)
+	logger.Println("Added task commands.")
+	logger.Println("Create TaskExecutor.")
 	return &TaskExecutor{
-		TaskID:      uuid.New(),
-		State:       StartingTask,
-		RunsOn:      getTasksMachine(cfg, task),
-		Files:       files,
-		CmdQueue:    ch,
-		OutputQueue: make(chan string, 10_000),
-		ErrorQueue:  make(chan error, 10_000),
+		TaskID:  uuid.New(),
+		State:   StartingTask,
+		RunsOn:  getTasksMachine(cfg, task),
+		Files:   files,
+		Cmds:    cmds,
+		Outputs: []string{},
+		Errors:  []string{},
 	}, err
 
 }

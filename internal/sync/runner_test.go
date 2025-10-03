@@ -4,15 +4,32 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"reflect"
+	"sort"
 	"strconv"
+	"strings"
 	"testing"
 
+	"github.com/ImTheCurse/ConflowCI/internal/mq"
 	"github.com/ImTheCurse/ConflowCI/pkg/config"
 	"github.com/ImTheCurse/ConflowCI/pkg/crypto"
 	"github.com/ImTheCurse/ConflowCI/pkg/ssh"
 )
 
 func TestRunTaskOnAllMachines(t *testing.T) {
+	ctx := context.Background()
+	logger.Printf("Creating Container RabbitMQ")
+	c, connURI, err := mq.CreateMessageQueueContainer()
+
+	os.Setenv("CONFLOW_MQ_URI", connURI)
+	defer os.Unsetenv("CONFLOW_MQ_URI")
+
+	if err != nil {
+		t.Fatalf("Failed to create container: %v", err)
+	}
+	defer c.Terminate(ctx)
+	logger.Printf("Container RabbitMQ created")
+
 	pub, _, err := crypto.GenerateKeys()
 	if err != nil {
 		t.Errorf("Failed to generate keys: %v", err)
@@ -20,7 +37,6 @@ func TestRunTaskOnAllMachines(t *testing.T) {
 	defer os.RemoveAll("keys")
 
 	///////////////////// First Connection //////////////////////////
-	ctx := context.Background()
 	container, err := ssh.CreateSSHServerContainer(string(pub))
 	if err != nil {
 		t.Errorf("Failed to start SSH server container: %v", err)
@@ -51,14 +67,10 @@ func TestRunTaskOnAllMachines(t *testing.T) {
 	defer s1.Close()
 
 	path := "$HOME/conflowci/build"
-	// createFileCmd := "touch test{1..20}.sh"
-	// WriteFileCmd := `for i in {1..20}; do echo 'Checking test run ${i}' > "test${i}.sh"; done`
+
 	WriteFileCmd := `for i in $(seq 1 20); do echo '#!/bin/sh' > "test$i.sh"; echo "echo Checking test run $i" >> "test$i.sh"; done`
 	changeFilePermissionsCmd := `for i in $(seq 1 20); do chmod +x "test$i.sh"; done`
-
 	createFileCmd := `for i in $(seq 1 20); do touch "test$i.sh"; done`
-	// WriteFileCmd := `for i in $(seq 1 20); do echo "Checking test run $i" > "test$i.sh"; done`
-	// changeFilePerrmissionsCmd := "chmod +x test{1..20}.sh"
 
 	cmd := fmt.Sprintf("mkdir -p %s && cd %s && %s && %s && %s", path, path, createFileCmd, WriteFileCmd, changeFilePermissionsCmd)
 	_, err = s1.CombinedOutput(cmd)
@@ -117,12 +129,47 @@ func TestRunTaskOnAllMachines(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to create task executor: %v", err)
 	}
-	errors := te.RunTaskOnAllMachines()
-	for cmdOutput := range te.OutputQueue {
+	fmt.Println("Running all tasks...")
+	err = te.RunTaskOnAllMachines()
+	for _, cmdOutput := range te.Outputs {
 		fmt.Printf("Command executed successfully, output: %s\n", cmdOutput)
 	}
-	if len(errors) > 0 {
-		t.Errorf("Failed to run task on all machines: got errors %v", errors)
+	if err != nil {
+		t.Errorf("Failed to run task on all machines: got errors %v", err)
 	}
 
+	if len(te.Errors) > 0 {
+		t.Errorf("Expected no errors, got errors: %v", te.Errors)
+	}
+	// order might seem funky but this is a lexographical order.
+	outputs := te.Outputs
+	expected := []string{
+		"Checking test run 1",
+		"Checking test run 10",
+		"Checking test run 11",
+		"Checking test run 12",
+		"Checking test run 13",
+		"Checking test run 14",
+		"Checking test run 15",
+		"Checking test run 16",
+		"Checking test run 17",
+		"Checking test run 18",
+		"Checking test run 19",
+		"Checking test run 2",
+		"Checking test run 20",
+		"Checking test run 3",
+		"Checking test run 4",
+		"Checking test run 5",
+		"Checking test run 6",
+		"Checking test run 7",
+		"Checking test run 8",
+		"Checking test run 9",
+	}
+	for i, o := range outputs {
+		outputs[i] = strings.TrimSpace(o)
+	}
+	sort.Strings(outputs)
+	if !reflect.DeepEqual(outputs, expected) {
+		t.Errorf("Expected outputs: %v, got: %v", expected, outputs)
+	}
 }

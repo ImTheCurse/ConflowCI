@@ -28,8 +28,9 @@ type Publisher struct {
 }
 
 type Consumer struct {
-	conn    *amqp.Connection
-	channel *amqp.Channel
+	conn      *amqp.Connection
+	channel   *amqp.Channel
+	publisher *Publisher
 
 	exchangeName string
 	tag          string // Consumer tag for message acknowledgment
