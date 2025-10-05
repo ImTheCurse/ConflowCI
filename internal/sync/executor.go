@@ -22,7 +22,10 @@ func NewTaskExecutor(conn *ssh.Client, cfg config.ValidatedConfig, task config.T
 			return nil, err
 		}
 	} else {
-		files = task.File
+		for _, file := range task.File {
+			filesWithPath := fmt.Sprintf("%s/%s", buildPath, file)
+			files = append(files, filesWithPath)
+		}
 	}
 	cmds := []string{}
 	for _, cmd := range task.Commands {

@@ -5,6 +5,8 @@ import (
 	"os"
 )
 
+const ConflowVersion = 0.1
+
 var logger = log.New(os.Stdout, "[Config Parser]: ", log.Lshortfile|log.LstdFlags)
 
 type Config struct {
