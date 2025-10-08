@@ -35,7 +35,7 @@ func TestGetFilesByRegex(t *testing.T) {
 		t.Errorf("Failed to add host key to known hosts: %v", err)
 	}
 
-	cfg, err := ssh.CreateConfig()
+	cfg, err := ssh.CreateTestConfig()
 	if err != nil {
 		t.Errorf("Failed to create SSH config: %v", err)
 	}

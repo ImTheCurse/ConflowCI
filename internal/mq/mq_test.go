@@ -43,7 +43,7 @@ func TestMessageQueue(t *testing.T) {
 		t.Errorf("Failed to add host key to known hosts: %v", err)
 	}
 
-	cfg, err := conflowSSH.CreateConfig()
+	cfg, err := conflowSSH.CreateTestConfig()
 	if err != nil {
 		t.Errorf("Failed to create SSH config: %v", err)
 	}

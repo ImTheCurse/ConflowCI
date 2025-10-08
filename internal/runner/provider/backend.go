@@ -1,10 +1,12 @@
 package provider
 
-import "github.com/ImTheCurse/ConflowCI/pkg/config"
+import (
+	"golang.org/x/crypto/ssh"
+)
 
 type RepositoryReader interface {
-	Clone(targetEndpoint config.EndpointInfo, cloneURL, dir string) error
-	Fetch(targetEndpoint config.EndpointInfo) error
-	CreateWorkTree(targetEndpoint config.EndpointInfo, dir string) error
-	RemoveWorkTree(targetEndpoint config.EndpointInfo, dir string) error
+	Clone(conn *ssh.Client, dir string) (string, error)
+	Fetch(conn *ssh.Client, dir string) (string, error)
+	CreateWorkTree(conn *ssh.Client, repoDir, wrkTreeRelPath string) error
+	RemoveWorkTree(conn *ssh.Client, repoDir, wrkTreeRelPath string) error
 }

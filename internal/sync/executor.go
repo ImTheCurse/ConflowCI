@@ -17,13 +17,13 @@ func NewTaskExecutor(conn *ssh.Client, cfg config.ValidatedConfig, task config.T
 	files := []string{}
 	var err error
 	if task.File == nil {
-		files, err = getFilesByRegex(conn, task.Pattern, buildPath)
+		files, err = getFilesByRegex(conn, task.Pattern, BuildPath)
 		if err != nil {
 			return nil, err
 		}
 	} else {
 		for _, file := range task.File {
-			filesWithPath := fmt.Sprintf("%s/%s", buildPath, file)
+			filesWithPath := fmt.Sprintf("%s/%s", BuildPath, file)
 			files = append(files, filesWithPath)
 		}
 	}

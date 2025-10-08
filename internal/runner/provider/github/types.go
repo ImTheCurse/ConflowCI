@@ -48,3 +48,10 @@ type User struct {
 	Login string `json:"login"`
 	ID    int    `json:"id,omitempty"`
 }
+
+type GitRepoReader struct {
+	Name         string
+	CloneURL     string
+	BranchName   string
+	RemoteOrigin string
+}

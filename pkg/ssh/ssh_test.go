@@ -31,7 +31,7 @@ func TestNewSSHConn(t *testing.T) {
 		t.Errorf("Failed to add host key to known hosts: %v", err)
 	}
 
-	cfg, err := CreateConfig()
+	cfg, err := CreateTestConfig()
 	if err != nil {
 		t.Errorf("Failed to create SSH config: %v", err)
 	}

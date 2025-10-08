@@ -6,7 +6,6 @@ import (
 
 	"github.com/ImTheCurse/ConflowCI/pkg/config"
 	"github.com/google/uuid"
-	"golang.org/x/crypto/ssh"
 )
 
 var logger = log.New(os.Stdout, "[Sync]: ", log.Lshortfile|log.LstdFlags)
@@ -67,7 +66,7 @@ func (s BuildState) String() string {
 	}
 }
 
-const buildPath string = "$HOME/conflowci/build"
+const BuildPath string = "$HOME/conflowci/build"
 const metadataFileName string = ".conflowci.toml"
 
 // TaskExecutor represents a task syncing for remote machines
@@ -84,14 +83,21 @@ type TaskExecutor struct {
 	Errors  []string
 }
 
-type WorkerBuilder struct {
-	Name     string
-	BuildID  uuid.UUID
-	State    BuildState
-	RunsOn   []config.EndpointInfo
-	Steps    []string
-	CloneURL string
-	Conn     *ssh.Client
+type WorkersBuilder struct {
+	Name       string
+	BuildID    uuid.UUID
+	State      BuildState
+	RunsOn     []config.EndpointInfo
+	Steps      []string
+	CloneURL   string
+	Remote     string
+	BranchName string
+}
+
+type WorkerBuildOutput struct {
+	WorkerName string
+	Output     string
+	Error      error
 }
 
 type BuildMetadata struct {

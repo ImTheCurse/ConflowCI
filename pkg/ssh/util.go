@@ -22,7 +22,7 @@ var Ep config.EndpointInfo = config.EndpointInfo{
 	PrivateKeyPath: "keys/id_rsa",
 }
 
-func CreateConfig() (*ssh.ClientConfig, error) {
+func CreateTestConfig() (*ssh.ClientConfig, error) {
 	sshCfg := SSHConnConfig{
 		Username:       Ep.User,
 		PrivateKeyPath: "keys/id_rsa",
