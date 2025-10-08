@@ -19,11 +19,13 @@ environment:
 hosts:
   - name: test-node-1
     address: test@192.168.1.101:22
+    private_key_path: $HOME/.ssh/id_rsa # Private key the server authenticates against your public key.
     install: # Per-host software bootstrap
       - apt-get update
       - apt-get install -y bison flex
   - name: test-node-2
     address: test@test.example.com # Can be a local or publicly accessible address
+    private_key_path: $HOME/.ssh/id_rsa_different
     install:
       - apt-get update
       - apt-get install -y docker git make

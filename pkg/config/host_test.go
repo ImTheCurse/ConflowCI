@@ -14,23 +14,33 @@ func TestIsValidHost(t *testing.T) {
 	}{
 		{
 			name:     "valid-host",
-			endpoint: EndpointInfo{User: "user", Host: "host", Port: 22},
+			endpoint: EndpointInfo{Name: "test-node-1", User: "user", Host: "host", Port: 22, PrivateKeyPath: "/path"},
 			wantErr:  nil,
 		},
 		{
 			name:     "invalid-user",
-			endpoint: EndpointInfo{User: "", Host: "host", Port: 22},
+			endpoint: EndpointInfo{Name: "test-node-1", User: "", Host: "host", Port: 22, PrivateKeyPath: "/path"},
 			wantErr:  ErrInvalidUser,
 		},
 		{
 			name:     "invalid-host",
-			endpoint: EndpointInfo{User: "user", Host: "", Port: 22},
+			endpoint: EndpointInfo{Name: "test-node-1", User: "user", Host: "", Port: 22, PrivateKeyPath: "/path"},
 			wantErr:  ErrInvalidHost,
 		},
 		{
 			name:     "invalid-port",
-			endpoint: EndpointInfo{User: "user", Host: "host", Port: 0},
+			endpoint: EndpointInfo{Name: "test-node-1", User: "user", Host: "host", Port: 0, PrivateKeyPath: "/path"},
 			wantErr:  ErrInvalidPortNum,
+		},
+		{
+			name:     "invalid-name",
+			endpoint: EndpointInfo{Name: "", User: "user", Host: "host", Port: 22, PrivateKeyPath: "/path"},
+			wantErr:  ErrInvalidHostName,
+		},
+		{
+			name:     "invalid-private-key-path",
+			endpoint: EndpointInfo{Name: "", User: "user", Host: "host", Port: 22, PrivateKeyPath: ""},
+			wantErr:  ErrInvalidHostName,
 		},
 	}
 

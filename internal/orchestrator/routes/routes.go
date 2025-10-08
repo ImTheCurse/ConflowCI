@@ -1,7 +1,7 @@
 package routes
 
 import (
-	"github.com/ImTheCurse/ConflowCI/internal/producer/controller"
+	"github.com/ImTheCurse/ConflowCI/internal/orchestrator/controller"
 	"github.com/gofiber/fiber/v2"
 )
 

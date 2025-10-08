@@ -1,5 +1,12 @@
 package github
 
+import (
+	"log"
+	"os"
+)
+
+var logger = log.New(os.Stdout, "[provider/github]: ", log.Lshortfile|log.LstdFlags)
+
 // PullRequestPayload represents the GitHub webhook payload for pull requests
 type PullRequestPayload struct {
 	Action      string      `json:"action"` // opened, closed, synchronize, etc.
@@ -40,4 +47,11 @@ type Repository struct {
 type User struct {
 	Login string `json:"login"`
 	ID    int    `json:"id,omitempty"`
+}
+
+type GitRepoReader struct {
+	Name         string
+	CloneURL     string
+	BranchName   string
+	RemoteOrigin string
 }

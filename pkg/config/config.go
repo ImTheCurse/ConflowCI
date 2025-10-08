@@ -2,13 +2,10 @@ package config
 
 import (
 	"fmt"
-	"log"
 	"os"
 
 	"gopkg.in/yaml.v3"
 )
-
-var logger = log.New(os.Stdout, "[Config Parser]: ", log.Lshortfile|log.LstdFlags)
 
 // NewConfig creates a new validated Config instance from a YAML file,
 // the function also expands environment variables for the Enviornmet
@@ -25,20 +22,26 @@ func NewConfig(filename string) (*ValidatedConfig, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't parse config file, make sure the config file has valid yaml format and required fields exist.")
 	}
-
+	logger.Println("Config file parsed successfully, expanding env...")
 	err = cfg.expandEnv()
 	if err != nil {
 		return nil, err
 	}
+	err = cfg.ExpandPrivKeyPath()
+	if err != nil {
+		return nil, err
+	}
+	logger.Println("Expanded env, validating config fields...")
 	cfg.ValidatePipeline()
 	cfg.ValidateProvider()
 	eps, err := cfg.ValidateParseHosts()
 	if err != nil {
 		return nil, err
 	}
+	logger.Println("Finished config validation.")
 	validatedCfg := &ValidatedConfig{
 		Config:    cfg,
-		endpoints: eps,
+		Endpoints: eps,
 	}
 	return validatedCfg, err
 }

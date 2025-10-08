@@ -1,7 +1,7 @@
 package main
 
 import (
-	router "github.com/ImTheCurse/ConflowCI/internal/producer/routes"
+	router "github.com/ImTheCurse/ConflowCI/internal/orchestrator/routes"
 	"github.com/gofiber/fiber/v2"
 )
 

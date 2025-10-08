@@ -9,6 +9,7 @@ var ErrInvalidPersonalAccessToken = errors.New("Empty Personal Access Token")
 var ErrInvalidBranchName = errors.New("Empty branch name")
 var ErrInvalidRepoName = errors.New("Empty repository name")
 
+// Gets the clone URL for the repository.
 func (cfg *Config) GetCloneURL() string {
 	repo := cfg.Provider.Github.Repository
 	cloneURL := fmt.Sprintf("https://github.com/%v.git", repo)
@@ -20,6 +21,7 @@ func (cfg *Config) GetCloneURL() string {
 	return cloneURL
 }
 
+// Validates the configuration for the provider.
 func (cfg *Config) ValidateProvider() error {
 	if len(cfg.Provider.Github.Repository) <= 0 {
 		return ErrInvalidRepoName

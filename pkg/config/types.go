@@ -1,5 +1,14 @@
 package config
 
+import (
+	"log"
+	"os"
+)
+
+const ConflowVersion = 0.1
+
+var logger = log.New(os.Stdout, "[Config Parser]: ", log.Lshortfile|log.LstdFlags)
+
 type Config struct {
 	Provider Provider     `yaml:"provider"`              // provider configuration
 	Env      *Environment `yaml:"environment,omitempty"` // enviorment variables shared across hosts
@@ -27,9 +36,10 @@ type Environment struct {
 }
 
 type Host struct {
-	Name         string    `yaml:"name"`              // host human readable name
-	Address      string    `yaml:"address"`           // local/public accesible address
-	InstallSteps *[]string `yaml:"install,omitempty"` // Bootstraping host machine
+	Name           string    `yaml:"name"`              // host human readable name
+	Address        string    `yaml:"address"`           // local/public accesible address
+	PrivateKeyPath string    `yaml:"private_key_path"`  // path to private key for SSH authentication
+	InstallSteps   *[]string `yaml:"install,omitempty"` // Bootstraping host machine
 }
 
 type Pipeline struct {
@@ -59,5 +69,13 @@ type TaskConsumerJobs struct {
 
 type ValidatedConfig struct {
 	*Config
-	endpoints []EndpointInfo
+	Endpoints []EndpointInfo
+}
+
+type EndpointInfo struct {
+	Name           string //matches the name of the host in the config's Host
+	User           string
+	Host           string
+	Port           uint16
+	PrivateKeyPath string // path to private key for SSH authentication
 }
