@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package github;
+option go_package = "github.com/ImTheCurse/ConflowCI/internal/provider/github/pb";
+
+service GithubProvider{
+    rpc Clone(SyncRequest) returns (SyncResponse);
+    rpc Fetch(SyncRequest) returns (SyncResponse);
+    rpc CreateWorkTree(WorkTreeRequest) returns (SyncResponse);
+    rpc RemoveWorkTree(WorkTreeRequest) returns (SyncResponse);
+}
+
+message SyncRequest{
+    string name = 1;
+    string dir = 2;
+    string clone_url = 3;
+    string branch_ref = 4;
+    string branch_name = 5;
+    string remote_origin = 6;
+    string token = 7;
+}
+
+message SyncResponse{
+    string output = 1;
+    SyncError error = 2;
+}
+
+message WorkTreeRequest {
+  string name = 1;
+  string repo_dir = 2;
+  string branch_name = 3;
+  string worktree_rel_path = 4;
+}
+
+message SyncError{
+    string reason = 1;
+}

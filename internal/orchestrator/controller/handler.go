@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/ImTheCurse/ConflowCI/internal/runner/provider/github"
+	"github.com/ImTheCurse/ConflowCI/internal/provider/github"
 	"github.com/gofiber/fiber/v2"
 )
 

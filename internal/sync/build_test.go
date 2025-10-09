@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ImTheCurse/ConflowCI/internal/runner/provider/github"
+	"github.com/ImTheCurse/ConflowCI/internal/provider/github"
 	"github.com/ImTheCurse/ConflowCI/pkg/config"
 	"github.com/ImTheCurse/ConflowCI/pkg/crypto"
 	"github.com/ImTheCurse/ConflowCI/pkg/ssh"
@@ -143,7 +143,7 @@ func TestBuildRepository(t *testing.T) {
 	reader := github.GitRepoReader{
 		Name:         wb.Name,
 		CloneURL:     wb.CloneURL,
-		BranchName:   wb.BranchName,
+		BranchRef:    wb.BranchName,
 		RemoteOrigin: wb.Remote,
 	}
 	outputs := wb.BuildRepository(&reader)

@@ -50,8 +50,4 @@ type User struct {
 }
 
 type GitRepoReader struct {
-	Name         string
-	CloneURL     string
-	BranchName   string
-	RemoteOrigin string
 }

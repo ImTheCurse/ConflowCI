@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ImTheCurse/ConflowCI/internal/runner/provider"
+	"github.com/ImTheCurse/ConflowCI/internal/provider"
 	"github.com/ImTheCurse/ConflowCI/pkg/config"
 	"github.com/ImTheCurse/ConflowCI/pkg/ssh"
 	"github.com/google/uuid"
