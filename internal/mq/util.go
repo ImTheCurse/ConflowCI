@@ -37,6 +37,8 @@ func CreateMessageQueueContainer() (testcontainers.Container, string, error) {
 		return nil, "", fmt.Errorf("failed to get mapped port: %v", err)
 	}
 	amqpURL := "amqp://guest:guest@" + host + ":" + port.Port() + "/"
+	mp, _ := rmqC.MappedPort(ctx, "14351/tcp")
+	logger.Printf("RabbitMQ container started on %s:%s", host, mp)
 	return rmqC, amqpURL, nil
 
 }

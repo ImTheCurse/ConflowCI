@@ -1,7 +1,6 @@
 package config
 
 import (
-	"os/user"
 	"reflect"
 	"testing"
 )
@@ -55,11 +54,6 @@ func TestIsValidHost(t *testing.T) {
 }
 
 func TestParseHost(t *testing.T) {
-	currentUser, err := user.Current()
-	if err != nil {
-		t.Fatalf("Failed to get current user: %v", err)
-	}
-	defaultUser := currentUser.Username
 
 	// Invalid tests are tested in ValidateEndpoint
 	tests := []struct {
@@ -70,26 +64,26 @@ func TestParseHost(t *testing.T) {
 	}{
 		{
 			name:     "valid-endpoint",
-			endpoint: "user@host:22",
-			want:     EndpointInfo{User: "user", Host: "host", Port: 22},
+			endpoint: "host:22",
+			want:     EndpointInfo{Host: "host", Port: 22},
 			wantErr:  nil,
 		},
 		{
 			name:     "valid-endpoint-without-user",
 			endpoint: "host:2222",
-			want:     EndpointInfo{User: defaultUser, Host: "host", Port: 2222},
+			want:     EndpointInfo{Host: "host", Port: 2222},
 			wantErr:  nil,
 		},
 		{
 			name:     "valid-endpoint-without-port",
-			endpoint: "user@host",
-			want:     EndpointInfo{User: "user", Host: "host", Port: 22},
+			endpoint: "host",
+			want:     EndpointInfo{Host: "host", Port: 0},
 			wantErr:  nil,
 		},
 		{
 			name:     "valid-endpoint-without-user-and-port",
 			endpoint: "host",
-			want:     EndpointInfo{User: defaultUser, Host: "host", Port: 22},
+			want:     EndpointInfo{Host: "host", Port: 0},
 			wantErr:  nil,
 		},
 	}

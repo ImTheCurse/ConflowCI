@@ -2,17 +2,21 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
 
 	githubPb "github.com/ImTheCurse/ConflowCI/internal/provider/github/pb"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	grpcUtil "github.com/ImTheCurse/ConflowCI/pkg/grpc"
 )
 
+var ()
+
 func main() {
+	grpcUtil.DefineFlags()
+	flag.Parse()
 	addr := "localhost:8918"
 
-	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpcUtil.CreateNewClientConnection(addr)
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}

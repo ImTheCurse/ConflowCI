@@ -3,7 +3,6 @@ package config
 import (
 	"fmt"
 	"os"
-	"os/user"
 	"strconv"
 	"strings"
 )
@@ -45,28 +44,17 @@ func (cfg *Config) ExpandPrivKeyPath() error {
 // Parses a host string into an EndpointInfo struct.
 func parseHost(host string) (EndpointInfo, error) {
 	ep := EndpointInfo{}
-	sepUser := strings.Split(host, "@")
-	var sepWithoutUser string
+	sepUser := strings.Split(host, ":")
 
 	if len(sepUser) == 1 {
-		defaultUser, err := user.Current()
-		if err != nil {
-			return EndpointInfo{}, fmt.Errorf("failed to get current user: %w", err)
-		}
-		ep.User = defaultUser.Username
-		sepWithoutUser = sepUser[0]
+		ep.Host = sepUser[0]
+		ep.Port = 0
 	} else {
-		ep.User = sepUser[0]
-		sepWithoutUser = sepUser[1]
-	}
-	sepAddr := strings.Split(sepWithoutUser, ":")
-	ep.Host = sepAddr[0]
-	if len(sepAddr) == 1 {
-		ep.Port = 22
-	} else {
-		port, err := strconv.ParseUint(sepAddr[1], 10, 16)
+		ep.Host = sepUser[0]
+		portStr := sepUser[1]
+		port, err := strconv.Atoi(portStr)
 		if err != nil {
-			return EndpointInfo{}, fmt.Errorf("failed to parse port: %w", err)
+			return EndpointInfo{}, fmt.Errorf("invalid port number: %s", portStr)
 		}
 		ep.Port = uint16(port)
 	}
@@ -91,4 +79,11 @@ func ValidateEndpoint(ep EndpointInfo) error {
 		return ErrInvalidPrivateKeyPath
 	}
 	return nil
+}
+
+func (ep EndpointInfo) GetEndpointURL() string {
+	if ep.Port == 0 {
+		return ep.Host
+	}
+	return fmt.Sprintf("%s:%d", ep.Host, ep.Port)
 }

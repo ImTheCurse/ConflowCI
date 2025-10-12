@@ -39,3 +39,5 @@ type Consumer struct {
 type ConsumerParams struct {
 	QueueRoutingInfo map[string]string // Stores key: queue name, val: routing key
 }
+
+type ConsumerServer struct{}

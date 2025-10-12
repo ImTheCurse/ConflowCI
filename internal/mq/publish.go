@@ -2,6 +2,7 @@ package mq
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -47,19 +48,57 @@ func NewPublisher(amqpURL, exchangeName string) (*Publisher, error) {
 
 // Publish sends a message to the exchange with the routing key
 func (p *Publisher) Publish(ctx context.Context, routingKey string, body []byte) error {
-	return p.channel.PublishWithContext(
-		ctx,
-		p.exchangeName,
-		routingKey,
-		false,
-		false,
-		amqp.Publishing{
-			ContentType:  "text/plain",
-			DeliveryMode: amqp.Persistent,
-			Body:         body,
-			Timestamp:    time.Now(),
-		},
-	)
+	return p.PublishWithRetry(ctx, routingKey, body)
+
+}
+
+// publishWithRetry handles retries for unroutable messages
+func (p *Publisher) PublishWithRetry(ctx context.Context, routingKey string, body []byte) error {
+	const maxRetries = 10
+	const initialBackoff = 500 * time.Millisecond
+
+	// Channel to receive returned messages
+	returns := p.channel.NotifyReturn(make(chan amqp.Return, 100))
+
+	var lastErr error
+	backoff := initialBackoff
+
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		// Publish with mandatory=true
+		err := p.channel.PublishWithContext(
+			ctx,
+			p.exchangeName,
+			routingKey,
+			true,
+			false,
+			amqp.Publishing{
+				ContentType:  "text/plain",
+				DeliveryMode: amqp.Persistent,
+				Body:         body,
+				Timestamp:    time.Now(),
+			},
+		)
+		if err != nil {
+			lastErr = err
+			time.Sleep(backoff)
+			backoff *= 2
+			continue
+		}
+
+		// Check if the message was returned as unroutable
+		select {
+		case ret := <-returns:
+			logger.Printf("Message unroutable, retrying: routingKey=%s, body=%s. requeueing...", routingKey, string(ret.Body))
+			lastErr = fmt.Errorf("message unroutable")
+			time.Sleep(backoff)
+			backoff *= 2
+		case <-time.After(1 * time.Millisecond):
+			// Message accepted, return success
+			return nil
+		}
+	}
+
+	return fmt.Errorf("failed to publish message after %d attempts: last error: %v", maxRetries, lastErr)
 }
 
 // Close cleans up resources

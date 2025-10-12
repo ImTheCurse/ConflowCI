@@ -22,7 +22,6 @@ func main() {
 	server := grpc.NewServer()
 
 	logger.Printf("Registering services...")
-	// register services here
 	githubPb.RegisterGithubProviderServer(server, &github.GitRepoReader{})
 
 	logger.Printf("gRPC server Listening on port %d", port)

@@ -2,76 +2,54 @@ package sync
 
 import (
 	"context"
-	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"reflect"
 	"slices"
-	"strconv"
 	"testing"
 
+	"github.com/ImTheCurse/ConflowCI/internal/sync/pb"
 	"github.com/ImTheCurse/ConflowCI/pkg/config"
-	"github.com/ImTheCurse/ConflowCI/pkg/crypto"
-	"github.com/ImTheCurse/ConflowCI/pkg/ssh"
 )
 
 func TestGetFilesByRegex(t *testing.T) {
-	pub, _, err := crypto.GenerateKeys()
-	if err != nil {
-		t.Errorf("Failed to generate keys: %v", err)
-	}
-	defer os.RemoveAll("keys")
 	ctx := context.Background()
-	container, err := ssh.CreateSSHServerContainer(string(pub))
+	tempDir, err := os.MkdirTemp("", "regex_test_*")
 	if err != nil {
-		t.Errorf("Failed to start SSH server container: %v", err)
+		t.Fatal(err)
 	}
-	Ep := ssh.Ep
-	fmt.Println("SSH server running at", Ep.Host, Ep.Port)
-	defer container.Terminate(ctx)
+	defer os.RemoveAll(tempDir)
+	args := []string{"example_test.go", "diff_test.go", "another_test.go"}
 
-	port := strconv.Itoa(int(Ep.Port))
-	err = ssh.AddHostKeyToKnownHosts(Ep.Host, port)
-	if err != nil {
-		t.Errorf("Failed to add host key to known hosts: %v", err)
-	}
+	cmd := exec.Command("touch", args...)
+	cmd.Dir = tempDir
 
-	cfg, err := ssh.CreateTestConfig()
-	if err != nil {
-		t.Errorf("Failed to create SSH config: %v", err)
-	}
-
-	conn, err := ssh.NewSSHConn(Ep, cfg)
-	if err != nil {
-		t.Errorf("Failed to create SSH connection: %v", err)
-	}
-	defer conn.Close()
-
-	sess, err := conn.NewSession()
-	if err != nil {
-		t.Errorf("Failed to create SSH session: %v", err)
-	}
-	defer sess.Close()
-
-	cmd := "mkdir test && cd test && touch example_test.go diff_test.go another_test.go"
-	o, err := sess.CombinedOutput(cmd)
+	o, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Errorf("Failed to run command: %v. got output: %v", err, string(o))
 	}
 
 	expr := ".+_test.go"
+	finder := pb.TaskFileFinder{
+		Pattern:  expr,
+		BuildDir: tempDir,
+	}
 
-	files, err := getFilesByRegex(conn, expr, ".")
+	files, err := GetFilesByRegex(ctx, &finder)
 	if err != nil {
 		t.Errorf("Failed to get files by regex: %v", err)
 	}
 
 	expected := []string{
-		"./test/example_test.go",
-		"./test/diff_test.go",
-		"./test/another_test.go",
+		filepath.Join(tempDir, "example_test.go"),
+		filepath.Join(tempDir, "diff_test.go"),
+		filepath.Join(tempDir, "another_test.go"),
 	}
-	if !reflect.DeepEqual(files, expected) {
-		t.Errorf("Expected files: %v got: %v", expected, files)
+	slices.Sort(expected)
+	slices.Sort(files.Files)
+	if !reflect.DeepEqual(files.Files, expected) {
+		t.Errorf("Expected files: %v got: %v", expected, files.Files)
 	}
 }
 

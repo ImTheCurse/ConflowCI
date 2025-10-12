@@ -2,10 +2,12 @@ package mq
 
 import (
 	"context"
+	"fmt"
+	"os/exec"
 	"sync"
 
+	pb "github.com/ImTheCurse/ConflowCI/internal/mq/pb"
 	amqp "github.com/rabbitmq/amqp091-go"
-	"golang.org/x/crypto/ssh"
 )
 
 // NewConsumer sets up a consumer bound to an exchange and queue
@@ -90,9 +92,8 @@ func NewConsumer(amqpURL string, exchangeName string, params ConsumerParams, tag
 	}, nil
 }
 
-// ConsumeCommand starts consuming
-func (c *Consumer) ConsumeCommand(ctx context.Context, wg *sync.WaitGroup,
-	client *ssh.Client, handler func([]byte, *ssh.Session) (string, error)) error {
+// ConsumeCommand starts consuming from the command queue.
+func (c *Consumer) ConsumeCommand(ctx context.Context, stream pb.ConsumerServicer_StartConsumerServer) error {
 	logger.Println("Consuming command queue.")
 	msgs, err := c.channel.Consume(
 		QueueNameCmd,
@@ -110,16 +111,12 @@ func (c *Consumer) ConsumeCommand(ctx context.Context, wg *sync.WaitGroup,
 	for {
 		select {
 		case d, ok := <-msgs:
+			logger.Println("Got message from command queue, checking if message is ok.")
 			if !ok {
-				return nil
+				return fmt.Errorf("failed to consume messages")
 			}
-			s, err := client.NewSession()
-			if err != nil {
-				_ = d.Nack(false, true) // requeue on error
-				continue
-			}
-			defer s.Close()
-			o, err := handler(d.Body, s) // error here is a cmd error
+			logger.Println("Message is ok, running command.")
+			o, err := runCommand(d.Body) // error here is a cmd error
 			if err != nil {
 				err = c.publisher.Publish(ctx, RoutingKeyErrorOutputQueue, []byte(o)) // send message to error queue if the cmd failed.
 				if err != nil {
@@ -131,14 +128,25 @@ func (c *Consumer) ConsumeCommand(ctx context.Context, wg *sync.WaitGroup,
 					logger.Printf("failed to publish message: %v, with error: %v", o, err)
 				}
 			}
-			wg.Done()
+
+			//Signal finished command.
+			isFinished := true
+			m := fmt.Sprintf("Command consumed and executed sucessfully with output: %s", o)
+
+			var pbErr *pb.ConsumerError
+			if err != nil {
+				pbErr = &pb.ConsumerError{Reason: err.Error()}
+			}
+			stream.Send(&pb.ConsumerCommandResponse{FinishedCommand: &isFinished, Output: m, Error: pbErr})
 			_ = d.Ack(false)
+
 		case <-ctx.Done():
 			return nil
 		}
 	}
 }
 
+// ConsumeQueueContents consumes messages from a queue and appends them to a buffer.
 func (c *Consumer) ConsumeQueueContents(wg *sync.WaitGroup, done chan struct{}, queueName string, buf *[]string, e *error) {
 	msgs, err := c.channel.Consume(
 		queueName,
@@ -176,4 +184,14 @@ func (c *Consumer) Close() {
 		_ = c.conn.Close()
 	}
 	c.publisher.Close()
+}
+
+// runCommand executes a command on the endpoint's machine.
+func runCommand(c []byte) (string, error) {
+	cmd := exec.Command("/bin/sh", "-c", string(c))
+
+	b, err := cmd.CombinedOutput()
+	output := string(b)
+	logger.Printf("Executed command: %s. got output: %s", string(cmd.String()), output)
+	return output, err
 }

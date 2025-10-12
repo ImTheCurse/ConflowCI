@@ -18,14 +18,12 @@ environment:
 # Pool of available machines/servers that you can ssh into
 hosts:
   - name: test-node-1
-    address: test@192.168.1.101:22
-    private_key_path: $HOME/.ssh/id_rsa # Private key the server authenticates against your public key.
+    address: 192.168.1.101:22
     install: # Per-host software bootstrap
       - apt-get update
       - apt-get install -y bison flex
   - name: test-node-2
-    address: test@test.example.com # Can be a local or publicly accessible address
-    private_key_path: $HOME/.ssh/id_rsa_different
+    address: test.example.com # Can be a local or publicly accessible address
     install:
       - apt-get update
       - apt-get install -y docker git make

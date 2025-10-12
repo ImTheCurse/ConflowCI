@@ -2,130 +2,94 @@ package sync
 
 import (
 	"context"
+	"flag"
 	"fmt"
+	"net"
 	"os"
+	"path/filepath"
 	"reflect"
-	"sort"
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/ImTheCurse/ConflowCI/internal/mq"
+	mqpb "github.com/ImTheCurse/ConflowCI/internal/mq/pb"
 	"github.com/ImTheCurse/ConflowCI/pkg/config"
-	"github.com/ImTheCurse/ConflowCI/pkg/crypto"
-	"github.com/ImTheCurse/ConflowCI/pkg/ssh"
+	grpcUtil "github.com/ImTheCurse/ConflowCI/pkg/grpc"
+	"google.golang.org/grpc"
 )
 
+func RunGRPCServer() {
+	port := 8918
+	lis, err := net.Listen("tcp", ":"+strconv.Itoa(port))
+	if err != nil {
+		logger.Fatalf("Failed to listen on port %d", port)
+	}
+	server := grpc.NewServer()
+
+	logger.Printf("Registering services...")
+	mqpb.RegisterConsumerServicerServer(server, &mq.ConsumerServer{})
+
+	logger.Printf("gRPC server Listening on port %d", port)
+	if err := server.Serve(lis); err != nil {
+		logger.Fatalf("Failed to serve gRPC server: %v", err)
+	}
+}
+
 func TestRunTaskOnAllMachines(t *testing.T) {
+	grpcUtil.DefineFlags()
+	*grpcUtil.TlsFlag = false
+	flag.Parse()
 	ctx := context.Background()
-	logger.Printf("Creating Container RabbitMQ")
+	logger.Printf("Creating Container RabbitMQ...")
+
 	c, connURI, err := mq.CreateMessageQueueContainer()
-
-	os.Setenv("CONFLOW_MQ_URI", connURI)
-	defer os.Unsetenv("CONFLOW_MQ_URI")
-
 	if err != nil {
 		t.Fatalf("Failed to create container: %v", err)
 	}
 	defer c.Terminate(ctx)
 	logger.Printf("Container RabbitMQ created")
 
-	pub, _, err := crypto.GenerateKeys()
-	if err != nil {
-		t.Errorf("Failed to generate keys: %v", err)
-	}
-	defer os.RemoveAll("keys")
+	os.Setenv("CONFLOW_MQ_URI", connURI)
+	defer os.Unsetenv("CONFLOW_MQ_URI")
 
-	///////////////////// First Connection //////////////////////////
-	container, err := ssh.CreateSSHServerContainer(string(pub))
+	err = os.MkdirAll(os.ExpandEnv(BuildPath), 0777)
 	if err != nil {
-		t.Errorf("Failed to start SSH server container: %v", err)
+		t.Fatalf("Failed to create build path: %v", err)
 	}
-	Ep := ssh.Ep
-	fmt.Println("SSH server running at", Ep.Host, Ep.Port)
-	defer container.Terminate(ctx)
+	defer os.RemoveAll(filepath.Join(os.ExpandEnv(BuildPath), "../"))
+	f, err := os.Create(os.ExpandEnv(BuildPath) + "/test1.sh")
+	if err != nil {
+		t.Fatalf("Failed to create test1.sh: %v", err)
+	}
+	_, err = f.WriteString(`#!/bin/sh
+		echo "hello-world!"`)
+	if err != nil {
+		t.Fatalf("Failed to write to test1.sh: %v", err)
+	}
+	err = f.Chmod(0777)
+	if err != nil {
+		t.Fatalf("Failed to chmod test1.sh: %v", err)
+	}
 
-	port := strconv.Itoa(int(Ep.Port))
-	err = ssh.AddHostKeyToKnownHosts(Ep.Host, port)
-	if err != nil {
-		t.Errorf("Failed to add host key to known hosts: %v", err)
+	go RunGRPCServer()
+	ep := config.EndpointInfo{
+		Name: "test-1",
+		Host: "localhost",
+		Port: 8918,
+		User: "user",
 	}
-	cfg, err := ssh.CreateTestConfig()
-	if err != nil {
-		t.Errorf("Failed to create SSH config: %v", err)
-	}
-	conn1, err := ssh.NewSSHConn(Ep, cfg)
-	if err != nil {
-		t.Errorf("Failed to create SSH connection: %v", err)
-	}
-	defer conn1.Close()
 
-	s1, err := conn1.NewSession()
-	if err != nil {
-		t.Errorf("Failed to create SSH session: %v", err)
-	}
-	defer s1.Close()
-
-	path := "$HOME/conflowci/build"
-
-	WriteFileCmd := `for i in $(seq 1 20); do echo '#!/bin/sh' > "test$i.sh"; echo "echo Checking test run $i" >> "test$i.sh"; done`
-	changeFilePermissionsCmd := `for i in $(seq 1 20); do chmod +x "test$i.sh"; done`
-	createFileCmd := `for i in $(seq 1 20); do touch "test$i.sh"; done`
-
-	cmd := fmt.Sprintf("mkdir -p %s && cd %s && %s && %s && %s", path, path, createFileCmd, WriteFileCmd, changeFilePermissionsCmd)
-	_, err = s1.CombinedOutput(cmd)
-	if err != nil {
-		t.Errorf("Failed to execute command: %v", err)
-	}
-	///////////////////////////////// End First Connection /////////////////////////////////////////
-	//////////////////////////////// Second Connection /////////////////////////////////////////////
-
-	container2, err := ssh.CreateSSHServerContainer(string(pub))
-	if err != nil {
-		t.Errorf("Failed to start SSH server container(second): %v", err)
-	}
-	Ep2 := ssh.Ep
-	Ep2.Name = "test-2"
-	fmt.Println("Second SSH server running at", Ep2.Host, Ep2.Port)
-	defer container2.Terminate(ctx)
-
-	port2 := strconv.Itoa(int(Ep2.Port))
-	err = ssh.AddHostKeyToKnownHosts(Ep2.Host, port2)
-	if err != nil {
-		t.Errorf("Failed to add host key to known hosts: %v", err)
-	}
-	cfg, err = ssh.CreateTestConfig()
-	if err != nil {
-		t.Errorf("Failed to create SSH config: %v", err)
-	}
-	conn2, err := ssh.NewSSHConn(Ep2, cfg)
-	if err != nil {
-		t.Errorf("Failed to create SSH connection: %v", err)
-	}
-	defer conn2.Close()
-
-	s2, err := conn2.NewSession()
-	if err != nil {
-		t.Errorf("Failed to create SSH session: %v", err)
-	}
-	defer s2.Close()
-	_, err = s2.CombinedOutput(cmd)
-	if err != nil {
-		t.Errorf("Failed to execute command: %v", err)
-	}
-	/////////////////////////////// End Second Connection /////////////////////////////////////////
-
-	pattern := ".*/test[0-9]{1,2}.sh"
 	valCfg := config.ValidatedConfig{
-		Endpoints: []config.EndpointInfo{Ep, Ep2},
+		Endpoints: []config.EndpointInfo{ep},
 	}
 	taskConsumer := config.TaskConsumerJobs{
 		Name:     "task-runner-test",
-		Pattern:  pattern,
+		File:     []string{"test1.sh"},
 		Commands: []string{"{file}"},
-		RunsOn:   []string{"container-node", "test-2"},
+		RunsOn:   []string{"test-1"},
 	}
-	te, err := NewTaskExecutor(conn1, valCfg, taskConsumer)
+
+	te, err := NewTaskExecutor(valCfg, taskConsumer)
 	if err != nil {
 		t.Errorf("Failed to create task executor: %v", err)
 	}
@@ -141,34 +105,8 @@ func TestRunTaskOnAllMachines(t *testing.T) {
 	if len(te.Errors) > 0 {
 		t.Errorf("Expected no errors, got errors: %v", te.Errors)
 	}
-	// order might seem funky but this is a lexographical order.
 	outputs := te.Outputs
-	expected := []string{
-		"Checking test run 1",
-		"Checking test run 10",
-		"Checking test run 11",
-		"Checking test run 12",
-		"Checking test run 13",
-		"Checking test run 14",
-		"Checking test run 15",
-		"Checking test run 16",
-		"Checking test run 17",
-		"Checking test run 18",
-		"Checking test run 19",
-		"Checking test run 2",
-		"Checking test run 20",
-		"Checking test run 3",
-		"Checking test run 4",
-		"Checking test run 5",
-		"Checking test run 6",
-		"Checking test run 7",
-		"Checking test run 8",
-		"Checking test run 9",
-	}
-	for i, o := range outputs {
-		outputs[i] = strings.TrimSpace(o)
-	}
-	sort.Strings(outputs)
+	expected := []string{"hello-world!\n"}
 	if !reflect.DeepEqual(outputs, expected) {
 		t.Errorf("Expected outputs: %v, got: %v", expected, outputs)
 	}

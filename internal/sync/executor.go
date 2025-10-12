@@ -1,26 +1,42 @@
 package sync
 
 import (
+	"context"
 	"fmt"
+	"os/exec"
 	"slices"
 	"strings"
 
+	pb "github.com/ImTheCurse/ConflowCI/internal/sync/pb"
 	"github.com/ImTheCurse/ConflowCI/pkg/config"
+	"github.com/ImTheCurse/ConflowCI/pkg/grpc"
 	"github.com/google/uuid"
-	"golang.org/x/crypto/ssh"
 )
 
 // Creates a new task executor, the task executor is responsible for executing tasks on a remote machine
 // it dispatches each cmd with file/pattern to a remote machine in a concurrent way using the RunTaskOnAllMachines func.
 // there is no guarantee that the commands will be executed in the order they were dispatched.
-func NewTaskExecutor(conn *ssh.Client, cfg config.ValidatedConfig, task config.TaskConsumerJobs) (*TaskExecutor, error) {
+func NewTaskExecutor(cfg config.ValidatedConfig, task config.TaskConsumerJobs) (*TaskExecutor, error) {
+	ctx := context.Background()
 	files := []string{}
 	var err error
 	if task.File == nil {
-		files, err = getFilesByRegex(conn, task.Pattern, BuildPath)
+		finder := pb.TaskFileFinder{
+			Pattern:  task.Pattern,
+			BuildDir: BuildPath,
+		}
+		endpoint := cfg.Endpoints[0]
+		conn, err := grpc.CreateNewClientConnection(endpoint.GetEndpointURL())
 		if err != nil {
 			return nil, err
 		}
+		client := pb.NewFileExtractorClient(conn)
+
+		f, err := client.GetFilesByRegex(ctx, &finder)
+		if err != nil {
+			return nil, err
+		}
+		files = f.Files
 	} else {
 		for _, file := range task.File {
 			filesWithPath := fmt.Sprintf("%s/%s", BuildPath, file)
@@ -59,17 +75,16 @@ func getTasksMachine(cfg config.ValidatedConfig, task config.TaskConsumerJobs) [
 	return res
 }
 
-// getFilesByRegex returns the list of files that match the given regex expression.
-// it uses posix-extended flavor of regex.
-func getFilesByRegex(conn *ssh.Client, expr string, buildDir string) ([]string, error) {
-	s, err := conn.NewSession()
-	if err != nil {
-		return nil, err
-	}
-	defer s.Close()
+func GetFilesByRegex(ctx context.Context, finder *pb.TaskFileFinder) (*pb.FileList, error) {
+	cmd := exec.Command(
+		"find",
+		finder.BuildDir,
+		"-regextype", "posix-extended",
+		"-regex", finder.Pattern,
+	)
+	cmd.Dir = finder.BuildDir
+	out, err := cmd.CombinedOutput()
 
-	cmd := fmt.Sprintf("find %s -regextype posix-extended -regex %q", buildDir, expr)
-	out, err := s.CombinedOutput(cmd)
 	if err != nil {
 		logger.Printf("Error running getFilesByRegex, output: %s", string(out))
 		return nil, err
@@ -83,5 +98,5 @@ func getFilesByRegex(conn *ssh.Client, expr string, buildDir string) ([]string, 
 			files = append(files, line)
 		}
 	}
-	return files, nil
+	return &pb.FileList{Files: files}, nil
 }

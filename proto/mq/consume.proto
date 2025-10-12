@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package mq;
+option go_package = "github.com/ImTheCurse/ConflowCI/internal/mq/pb";
+
+
+service ConsumerServicer{
+    rpc StartConsumer(ConsumerCommandRequest)returns(stream ConsumerCommandResponse);
+}
+
+message ConsumerCommandRequest{
+    string mq_url = 1;
+    string exchange = 2;
+    map<string,string> params = 3;
+    string tag = 4;
+}
+
+message ConsumerCommandResponse{
+    string output = 1;
+    optional bool finished_command = 2;
+    ConsumerError error = 3;
+}
+message ConsumerError{
+    string reason = 1;
+}

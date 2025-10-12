@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package sync;
+option go_package = "github.com/ImTheCurse/ConflowCI/internal/sync/pb";
+
+service FileExtractor{
+    rpc GetFilesByRegex(TaskFileFinder)returns(FileList);
+}
+
+message TaskFileFinder{
+   string pattern = 1;
+   string build_dir = 2;
+}
+
+message FileList{
+    repeated string files = 1;
+}

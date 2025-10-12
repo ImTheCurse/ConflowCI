@@ -6,8 +6,8 @@ import (
 	"sync"
 
 	"github.com/ImTheCurse/ConflowCI/internal/mq"
-	"github.com/ImTheCurse/ConflowCI/pkg/ssh"
-	goSSH "golang.org/x/crypto/ssh"
+	mqpb "github.com/ImTheCurse/ConflowCI/internal/mq/pb"
+	"github.com/ImTheCurse/ConflowCI/pkg/grpc"
 )
 
 // RunTaskOnAllMachines distributes tasks across all endpoints
@@ -18,7 +18,6 @@ func (te *TaskExecutor) RunTaskOnAllMachines() error {
 	logger.Printf("%s: with id: %s", te.State.String(), te.TaskID)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	var wg sync.WaitGroup
 	wg.Add(len(te.Cmds))
@@ -31,38 +30,57 @@ func (te *TaskExecutor) RunTaskOnAllMachines() error {
 		},
 	}
 
+	var consumersReady sync.WaitGroup
+	consumersReady.Add(len(te.RunsOn))
 	// start all consumer goroutines
 	for _, ep := range te.RunsOn {
 		logger.Printf("Creating consumer for endpoint: %s", ep.Name)
 
-		consumer, err := mq.NewConsumer(uri, mq.ExchangeName, params, ep.Name)
-		if err != nil {
-			logger.Printf("Error creating consumer: %v", err)
-			continue
-		}
-		defer consumer.Close()
+		go func() {
+			conn, err := grpc.CreateNewClientConnection(ep.GetEndpointURL())
+			if err != nil {
+				logger.Printf("Error creating gRPC connection: %v", err)
+				return
+			}
 
-		sshCfg := ssh.SSHConnConfig{
-			Username:       ep.User,
-			PrivateKeyPath: ep.PrivateKeyPath,
-		}
+			client := mqpb.NewConsumerServicerClient(conn)
+			req := mqpb.ConsumerCommandRequest{
+				MqUrl:    uri,
+				Exchange: mq.ExchangeName,
+				Params:   params.QueueRoutingInfo,
+				Tag:      ep.Name,
+			}
+			stream, err := client.StartConsumer(ctx, &req)
+			if err != nil {
+				logger.Printf("Error starting consumer: %v", err)
+				return
+			}
 
-		cfg, err := sshCfg.BuildConfig()
-		if err != nil {
-			logger.Printf("Error building SSH config: %v", err)
-			continue
-		}
+			consumersReady.Done()
+			logger.Printf("Consumer ready for endpoint: %s", ep.Name)
 
-		conn, err := ssh.NewSSHConn(ep, cfg)
-		if err != nil {
-			logger.Printf("Failed to create SSH connection: %v", err)
-			break
-		}
-		defer conn.Close()
+			// we recieve the client's stream right away so client.StartConsumer isn't blocking.
+			for {
+				msg, err := stream.Recv()
+				if err != nil {
+					logger.Printf("Error receiving message: %v", err)
+					return
+				}
 
-		go consumer.ConsumeCommand(ctx, &wg, conn, runCommandOnRemoteMachine)
+				if msg.FinishedCommand != nil {
+					logger.Println("Command finished")
+					wg.Done()
+				}
+
+				if msg.Error != nil {
+					logger.Printf("Error received from remote machine: %v", msg.Error)
+				}
+				logger.Printf("Output received from remote machine: %v", msg.Output)
+			}
+		}()
 	}
 
+	consumersReady.Wait()
 	for i, cmd := range te.Cmds {
 		p, err := mq.NewPublisher(uri, mq.ExchangeName)
 		if err != nil {
@@ -77,6 +95,7 @@ func (te *TaskExecutor) RunTaskOnAllMachines() error {
 	}
 
 	wg.Wait()
+	cancel()
 
 	logger.Println("Getting command outputs and errors...")
 
@@ -128,12 +147,4 @@ func (te *TaskExecutor) RunTaskOnAllMachines() error {
 	te.Outputs = outputsRes
 	te.Errors = errorsRes
 	return err
-}
-
-// runCommandOnRemoteMachine executes a command on the endpoint's machine.
-func runCommandOnRemoteMachine(cmd []byte, s *goSSH.Session) (string, error) {
-	b, err := s.CombinedOutput(string(cmd))
-	output := string(b)
-	logger.Printf("Executed command: %s. got output: %s", string(cmd), output)
-	return output, err
 }

@@ -8,3 +8,9 @@ PROTOC_GEN_FLAGS = \
 
 github-proto:
 	protoc $(PROTOC_GEN_FLAGS) proto/github/provider.proto
+
+sync-proto:
+	protoc $(PROTOC_GEN_FLAGS) proto/sync/exec.proto
+
+mq-proto:
+	protoc $(PROTOC_GEN_FLAGS) proto/mq/consume.proto
