@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v3.21.12
-// source: proto/sync/exec.proto
+// source: sync/exec.proto
 
 package pb
 
@@ -115,5 +115,5 @@ var FileExtractor_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "proto/sync/exec.proto",
+	Metadata: "sync/exec.proto",
 }

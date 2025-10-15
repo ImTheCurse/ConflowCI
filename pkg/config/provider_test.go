@@ -132,7 +132,7 @@ func TestGetCloneURL(t *testing.T) {
 					},
 				},
 			},
-			expectedURL: "https://ci:test-token-very-private@github.com/test/repo.git",
+			expectedURL: "https://github.com/test/repo.git",
 		},
 	}
 

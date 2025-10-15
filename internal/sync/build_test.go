@@ -1,162 +1,155 @@
 package sync
 
-// import (
-// 	"bytes"
-// 	"context"
-// 	"fmt"
-// 	"os"
-// 	"path/filepath"
-// 	"strconv"
-// 	"strings"
-// 	"testing"
-// 	"time"
+import (
+	"bytes"
+	"flag"
+	"fmt"
+	"net"
+	"os"
+	"os/exec"
+	"os/user"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
 
-// 	"github.com/ImTheCurse/ConflowCI/internal/provider/github"
-// 	"github.com/ImTheCurse/ConflowCI/pkg/config"
-// 	"github.com/ImTheCurse/ConflowCI/pkg/crypto"
-// 	"github.com/ImTheCurse/ConflowCI/pkg/ssh"
-// 	"github.com/google/uuid"
-// 	"github.com/pelletier/go-toml"
-// )
+	git "github.com/ImTheCurse/ConflowCI/internal/provider/github"
+	providerPB "github.com/ImTheCurse/ConflowCI/internal/provider/pb"
+	syncPB "github.com/ImTheCurse/ConflowCI/internal/sync/pb"
+	"github.com/ImTheCurse/ConflowCI/pkg/config"
+	cgrpc "github.com/ImTheCurse/ConflowCI/pkg/grpc"
+	"github.com/google/uuid"
+	"github.com/pelletier/go-toml"
+	"google.golang.org/grpc"
+)
 
-// func TestCreateMetadataFile(t *testing.T) {
-// 	pub, _, err := crypto.GenerateKeys()
-// 	if err != nil {
-// 		t.Errorf("Failed to generate keys: %v", err)
-// 	}
-// 	defer os.RemoveAll("keys")
-// 	ctx := context.Background()
-// 	container, err := ssh.CreateSSHServerContainer(string(pub))
-// 	if err != nil {
-// 		t.Errorf("Failed to start SSH server container: %v", err)
-// 	}
-// 	fmt.Println("SSH server running at", ssh.Ep.Host, ssh.Ep.Port)
-// 	defer container.Terminate(ctx)
+func RunGRPCBuilderServer(t *testing.T, portCh chan<- int) {
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		logger.Fatal("Failed to listen on RunGRPCBuilder server")
+	}
+	port := lis.Addr().(*net.TCPAddr).Port
+	portCh <- port
+	server := grpc.NewServer()
 
-// 	port := strconv.Itoa(int(ssh.Ep.Port))
-// 	err = ssh.AddHostKeyToKnownHosts(ssh.Ep.Host, port)
-// 	if err != nil {
-// 		t.Errorf("Failed to add host key to known hosts: %v", err)
-// 	}
+	logger.Printf("Registering services...")
+	providerPB.RegisterRepositoryProviderServer(server, &git.GitRepoReader{})
 
-// 	cfg, err := ssh.CreateTestConfig()
-// 	if err != nil {
-// 		t.Errorf("Failed to create SSH config: %v", err)
-// 	}
+	logger.Printf("gRPC server Listening on port %d", port)
+	if err := server.Serve(lis); err != nil {
+		logger.Fatalf("Failed to serve gRPC server: %v", err)
+	}
+}
 
-// 	conn, err := ssh.NewSSHConn(ssh.Ep, cfg)
-// 	if err != nil {
-// 		t.Errorf("Failed to create SSH connection: %v", err)
-// 	}
-// 	defer conn.Close()
+func TestCreateMetadataFile(t *testing.T) {
+	BuildPath = t.TempDir()
+	defer os.RemoveAll(filepath.Join(BuildPath, "../"))
+	cgrpc.DefineFlags()
+	*cgrpc.TlsFlag = false
+	flag.Parse()
+	ch := make(chan int)
+	go RunGRPCBuilderServer(t, ch)
 
-// 	wb := &WorkersBuilder{
-// 		Name:     "testproject",
-// 		BuildID:  uuid.New(),
-// 		CloneURL: "https://github.com/user/testproject.git",
-// 	}
+	port := <-ch
 
-// 	if err := wb.CreateMetadataFile(conn); err != nil {
-// 		t.Fatalf("CreateMetadataFile returned error: %v", err)
-// 	}
+	conn, err := cgrpc.CreateNewClientConnection(fmt.Sprintf("localhost:%d", port))
+	if err != nil {
+		t.Fatalf("Failed to create client connection: %v", err)
+	}
+	p := providerPB.NewRepositoryProviderClient(conn)
+	s := WorkerBuilderServer{provider: p}
 
-// 	metadataPath := filepath.Join(BuildPath, wb.Name, ".conflowci.toml")
+	cfg := syncPB.WorkerConfig{
+		WorkerName: "test-worker",
+		Req: &providerPB.SyncRequest{
+			Name:     "test",
+			CloneUrl: "https://github.com/user/testproject.git",
+		},
+	}
 
-// 	var metadata BuildMetadata
+	if err := s.createMetadataFile(&cfg); err != nil {
+		t.Fatalf("CreateMetadataFile returned error: %v", err)
+	}
 
-// 	s, err := conn.NewSession()
-// 	if err != nil {
-// 		t.Fatalf("Failed to create SSH session: %v", err)
-// 	}
-// 	defer s.Close()
+	metadataPath := filepath.Join(os.ExpandEnv(BuildPath), cfg.Req.Name, ".conflowci.toml")
 
-// 	b, err := s.Output(fmt.Sprintf("cat %s", metadataPath))
-// 	if err != nil {
-// 		t.Fatalf("Failed to output metadata file: %v", err)
-// 	}
-// 	reader := bytes.NewReader(b)
+	cmd := exec.Command("cat", metadataPath)
+	b, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("Failed to output metadata file: %v, output: %v", err, string(b))
+	}
+	reader := bytes.NewReader(b)
 
-// 	if err := toml.NewDecoder(reader).Decode(&metadata); err != nil {
-// 		t.Fatalf("Failed to decode TOML: %v", err)
-// 	}
+	var metadata BuildMetadata
+	if err := toml.NewDecoder(reader).Decode(&metadata); err != nil {
+		t.Fatalf("Failed to decode TOML: %v", err)
+	}
 
-// 	if metadata.Repository.Name != wb.Name {
-// 		t.Errorf("Expected Repository.Name %s, got %s", wb.Name, metadata.Repository.Name)
-// 	}
-// 	if metadata.Repository.Source != wb.CloneURL {
-// 		t.Errorf("Expected Repository.Source %s, got %s", wb.CloneURL, metadata.Repository.Source)
-// 	}
-// 	if metadata.State.Checksum == "" {
-// 		t.Errorf("Expected non-empty checksum")
-// 	}
+	if metadata.Repository.Name != cfg.Req.Name {
+		t.Errorf("Expected Repository.Name %s, got %s", cfg.Req.Name, metadata.Repository.Name)
+	}
+	if metadata.Repository.Source != cfg.Req.CloneUrl {
+		t.Errorf("Expected Repository.Source %s, got %s", cfg.Req.CloneUrl, metadata.Repository.Source)
+	}
+	if metadata.State.Checksum == "" {
+		t.Errorf("Expected non-empty checksum")
+	}
 
-// 	// Validate timestamps roughly (within 10 seconds)
-// 	now := time.Now()
-// 	clonedAt, _ := time.Parse(time.RFC3339, metadata.State.ClonedAt)
-// 	if now.Sub(clonedAt) > 10*time.Second {
-// 		t.Errorf("ClonedAt timestamp is too old")
-// 	}
-// }
+	// Validate timestamps roughly (within 10 seconds)
+	now := time.Now()
+	clonedAt, _ := time.Parse(time.RFC3339, metadata.State.ClonedAt)
+	if now.Sub(clonedAt) > 10*time.Second {
+		t.Errorf("ClonedAt timestamp is too old")
+	}
+}
 
-// func TestBuildRepository(t *testing.T) {
-// 	pub, _, err := crypto.GenerateKeys()
-// 	if err != nil {
-// 		t.Errorf("Failed to generate keys: %v", err)
-// 	}
-// 	defer os.RemoveAll("keys")
-// 	ctx := context.Background()
-// 	container, err := ssh.CreateSSHServerContainer(string(pub))
-// 	if err != nil {
-// 		t.Errorf("Failed to start SSH server container: %v", err)
-// 	}
-// 	fmt.Println("SSH server running at", ssh.Ep.Host, ssh.Ep.Port)
-// 	defer container.Terminate(ctx)
+func TestBuildRepository(t *testing.T) {
+	BuildPath = t.TempDir()
+	defer os.RemoveAll(filepath.Join(BuildPath, "../"))
+	cgrpc.DefineFlags()
+	*cgrpc.TlsFlag = false
+	flag.Parse()
+	ch := make(chan int)
+	go RunGRPCBuilderServer(t, ch)
 
-// 	_, _, _ = container.Exec(ctx, []string{"apk", "add", "git"})
-// 	port := strconv.Itoa(int(ssh.Ep.Port))
-// 	err = ssh.AddHostKeyToKnownHosts(ssh.Ep.Host, port)
-// 	if err != nil {
-// 		t.Errorf("Failed to add host key to known hosts: %v", err)
-// 	}
+	port := <-ch
 
-// 	cfg, err := ssh.CreateTestConfig()
-// 	if err != nil {
-// 		t.Errorf("Failed to create SSH config: %v", err)
-// 	}
+	u, err := user.Current()
+	if err != nil {
+		t.Fatalf("Unable to get os user. got error: %s", err)
+	}
 
-// 	conn, err := ssh.NewSSHConn(ssh.Ep, cfg)
-// 	if err != nil {
-// 		t.Errorf("Failed to create SSH connection: %v", err)
-// 	}
-// 	defer conn.Close()
+	ep := config.EndpointInfo{
+		Name: "test",
+		Host: "localhost",
+		Port: uint16(port),
+	}
 
-// 	wb := &WorkersBuilder{
-// 		Name:       "demo-repo",
-// 		BuildID:    uuid.New(),
-// 		State:      StartingBuild,
-// 		CloneURL:   "https://github.com/ImTheCurse/demo-repo.git",
-// 		RunsOn:     []config.EndpointInfo{ssh.Ep},
-// 		Steps:      []string{"chmod +x whoami.sh", "./whoami.sh", `echo "third command"`},
-// 		Remote:     "pull/6/head:pr-6",
-// 		BranchName: "pr-6",
-// 	}
-// 	reader := github.GitRepoReader{
-// 		Name:         wb.Name,
-// 		CloneURL:     wb.CloneURL,
-// 		BranchRef:    wb.BranchName,
-// 		RemoteOrigin: wb.Remote,
-// 	}
-// 	outputs := wb.BuildRepository(&reader)
+	wb := &WorkersBuilder{
+		Name:       "demo-repo",
+		BuildID:    uuid.New(),
+		State:      StartingBuild,
+		CloneURL:   "https://github.com/ImTheCurse/demo-repo.git",
+		RunsOn:     []config.EndpointInfo{ep},
+		Steps:      []string{"chmod +x whoami.sh", "./whoami.sh", `echo "third command"`},
+		BranchRef:  "pull/6/head:pr-6",
+		Remote:     "origin",
+		BranchName: "another-change",
+	}
+	outputs := wb.BuildAllEndpoints()
+	fmt.Printf("outputs: %v", outputs)
+	if len(outputs) != 1 {
+		t.Errorf("Expected 1 output, got %d", len(outputs))
+	}
+	expectedOut := strings.TrimSpace(fmt.Sprintf(`I am: %s
+        small change
+        third command`, u.Username))
+	actual := strings.TrimSpace(outputs[0].Output)
 
-// 	expectedOut := strings.TrimSpace(fmt.Sprintf(`I am: %s
-//         small change
-//         third command`, ssh.Ep.User))
-// 	actual := strings.TrimSpace(outputs[0].Output)
+	actual = strings.ReplaceAll(actual, " ", "")
+	expected := strings.ReplaceAll(expectedOut, " ", "")
 
-// 	actual = strings.ReplaceAll(actual, " ", "")
-// 	expected := strings.ReplaceAll(expectedOut, " ", "")
-
-// 	if actual != expected {
-// 		t.Errorf("Error: expected: %s, got: %s", expectedOut, outputs[0].Output)
-// 	}
-// }
+	if actual != expected {
+		t.Errorf("Error: expected: %s, got: %s", expectedOut, outputs[0].Output)
+	}
+}

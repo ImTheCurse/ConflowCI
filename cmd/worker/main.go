@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	"github.com/ImTheCurse/ConflowCI/internal/provider/github"
-	githubPb "github.com/ImTheCurse/ConflowCI/internal/provider/github/pb"
+	providerPB "github.com/ImTheCurse/ConflowCI/internal/provider/pb"
 	"google.golang.org/grpc"
 )
 
@@ -22,7 +22,7 @@ func main() {
 	server := grpc.NewServer()
 
 	logger.Printf("Registering services...")
-	githubPb.RegisterGithubProviderServer(server, &github.GitRepoReader{})
+	providerPB.RegisterRepositoryProviderServer(server, &github.GitRepoReader{})
 
 	logger.Printf("gRPC server Listening on port %d", port)
 	if err := server.Serve(lis); err != nil {

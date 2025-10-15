@@ -2,10 +2,14 @@ package grpc
 
 import (
 	"flag"
+	"sync"
 )
 
 var TlsFlag *bool
+var once sync.Once
 
 func DefineFlags() {
-	TlsFlag = flag.Bool("tls", true, "if transport client uses TLS, by default true.")
+	once.Do(func() {
+		TlsFlag = flag.Bool("tls", true, "enable TLS")
+	})
 }

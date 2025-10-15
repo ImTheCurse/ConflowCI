@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package sync;
+option go_package = "github.com/ImTheCurse/ConflowCI/internal/sync/pb";
+import "provider/provider.proto";
+
+service WorkerBuilder{
+    rpc BuildRepository(WorkerConfig)returns(WorkerBuildOutput);
+}
+
+message WorkerConfig{
+    string worker_name = 1;
+    provider.SyncRequest req = 2;
+    repeated string build_steps = 3;
+
+}
+message WorkerBuildOutput{
+	string WorkerName = 1;
+	string Output = 2;
+	WorkerBuildError error = 3;
+}
+
+message WorkerBuildError{
+	string Error = 1;
+}

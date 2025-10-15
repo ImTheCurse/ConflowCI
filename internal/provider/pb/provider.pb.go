@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.10
 // 	protoc        v3.21.12
-// source: proto/github/provider.proto
+// source: proto/provider/provider.proto
 
 package pb
 
@@ -36,7 +36,7 @@ type SyncRequest struct {
 
 func (x *SyncRequest) Reset() {
 	*x = SyncRequest{}
-	mi := &file_proto_github_provider_proto_msgTypes[0]
+	mi := &file_proto_provider_provider_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -48,7 +48,7 @@ func (x *SyncRequest) String() string {
 func (*SyncRequest) ProtoMessage() {}
 
 func (x *SyncRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_github_provider_proto_msgTypes[0]
+	mi := &file_proto_provider_provider_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -61,7 +61,7 @@ func (x *SyncRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SyncRequest.ProtoReflect.Descriptor instead.
 func (*SyncRequest) Descriptor() ([]byte, []int) {
-	return file_proto_github_provider_proto_rawDescGZIP(), []int{0}
+	return file_proto_provider_provider_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *SyncRequest) GetName() string {
@@ -123,7 +123,7 @@ type SyncResponse struct {
 
 func (x *SyncResponse) Reset() {
 	*x = SyncResponse{}
-	mi := &file_proto_github_provider_proto_msgTypes[1]
+	mi := &file_proto_provider_provider_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -135,7 +135,7 @@ func (x *SyncResponse) String() string {
 func (*SyncResponse) ProtoMessage() {}
 
 func (x *SyncResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_github_provider_proto_msgTypes[1]
+	mi := &file_proto_provider_provider_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -148,7 +148,7 @@ func (x *SyncResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SyncResponse.ProtoReflect.Descriptor instead.
 func (*SyncResponse) Descriptor() ([]byte, []int) {
-	return file_proto_github_provider_proto_rawDescGZIP(), []int{1}
+	return file_proto_provider_provider_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *SyncResponse) GetOutput() string {
@@ -177,7 +177,7 @@ type WorkTreeRequest struct {
 
 func (x *WorkTreeRequest) Reset() {
 	*x = WorkTreeRequest{}
-	mi := &file_proto_github_provider_proto_msgTypes[2]
+	mi := &file_proto_provider_provider_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -189,7 +189,7 @@ func (x *WorkTreeRequest) String() string {
 func (*WorkTreeRequest) ProtoMessage() {}
 
 func (x *WorkTreeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_github_provider_proto_msgTypes[2]
+	mi := &file_proto_provider_provider_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -202,7 +202,7 @@ func (x *WorkTreeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WorkTreeRequest.ProtoReflect.Descriptor instead.
 func (*WorkTreeRequest) Descriptor() ([]byte, []int) {
-	return file_proto_github_provider_proto_rawDescGZIP(), []int{2}
+	return file_proto_provider_provider_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *WorkTreeRequest) GetName() string {
@@ -242,7 +242,7 @@ type SyncError struct {
 
 func (x *SyncError) Reset() {
 	*x = SyncError{}
-	mi := &file_proto_github_provider_proto_msgTypes[3]
+	mi := &file_proto_provider_provider_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -254,7 +254,7 @@ func (x *SyncError) String() string {
 func (*SyncError) ProtoMessage() {}
 
 func (x *SyncError) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_github_provider_proto_msgTypes[3]
+	mi := &file_proto_provider_provider_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -267,7 +267,7 @@ func (x *SyncError) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SyncError.ProtoReflect.Descriptor instead.
 func (*SyncError) Descriptor() ([]byte, []int) {
-	return file_proto_github_provider_proto_rawDescGZIP(), []int{3}
+	return file_proto_provider_provider_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *SyncError) GetReason() string {
@@ -277,11 +277,11 @@ func (x *SyncError) GetReason() string {
 	return ""
 }
 
-var File_proto_github_provider_proto protoreflect.FileDescriptor
+var File_proto_provider_provider_proto protoreflect.FileDescriptor
 
-const file_proto_github_provider_proto_rawDesc = "" +
+const file_proto_provider_provider_proto_rawDesc = "" +
 	"\n" +
-	"\x1bproto/github/provider.proto\x12\x06github\"\xcb\x01\n" +
+	"\x1dproto/provider/provider.proto\x12\bprovider\"\xcb\x01\n" +
 	"\vSyncRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x10\n" +
 	"\x03dir\x18\x02 \x01(\tR\x03dir\x12\x1b\n" +
@@ -291,10 +291,10 @@ const file_proto_github_provider_proto_rawDesc = "" +
 	"\vbranch_name\x18\x05 \x01(\tR\n" +
 	"branchName\x12#\n" +
 	"\rremote_origin\x18\x06 \x01(\tR\fremoteOrigin\x12\x14\n" +
-	"\x05token\x18\a \x01(\tR\x05token\"O\n" +
+	"\x05token\x18\a \x01(\tR\x05token\"Q\n" +
 	"\fSyncResponse\x12\x16\n" +
-	"\x06output\x18\x01 \x01(\tR\x06output\x12'\n" +
-	"\x05error\x18\x02 \x01(\v2\x11.github.SyncErrorR\x05error\"\x8d\x01\n" +
+	"\x06output\x18\x01 \x01(\tR\x06output\x12)\n" +
+	"\x05error\x18\x02 \x01(\v2\x13.provider.SyncErrorR\x05error\"\x8d\x01\n" +
 	"\x0fWorkTreeRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x19\n" +
 	"\brepo_dir\x18\x02 \x01(\tR\arepoDir\x12\x1f\n" +
@@ -302,42 +302,42 @@ const file_proto_github_provider_proto_rawDesc = "" +
 	"branchName\x12*\n" +
 	"\x11worktree_rel_path\x18\x04 \x01(\tR\x0fworktreeRelPath\"#\n" +
 	"\tSyncError\x12\x16\n" +
-	"\x06reason\x18\x01 \x01(\tR\x06reason2\xfa\x01\n" +
-	"\x0eGithubProvider\x122\n" +
-	"\x05Clone\x12\x13.github.SyncRequest\x1a\x14.github.SyncResponse\x122\n" +
-	"\x05Fetch\x12\x13.github.SyncRequest\x1a\x14.github.SyncResponse\x12?\n" +
-	"\x0eCreateWorkTree\x12\x17.github.WorkTreeRequest\x1a\x14.github.SyncResponse\x12?\n" +
-	"\x0eRemoveWorkTree\x12\x17.github.WorkTreeRequest\x1a\x14.github.SyncResponseB=Z;github.com/ImTheCurse/ConflowCI/internal/provider/github/pbb\x06proto3"
+	"\x06reason\x18\x01 \x01(\tR\x06reason2\x8e\x02\n" +
+	"\x12RepositoryProvider\x126\n" +
+	"\x05Clone\x12\x15.provider.SyncRequest\x1a\x16.provider.SyncResponse\x126\n" +
+	"\x05Fetch\x12\x15.provider.SyncRequest\x1a\x16.provider.SyncResponse\x12C\n" +
+	"\x0eCreateWorkTree\x12\x19.provider.WorkTreeRequest\x1a\x16.provider.SyncResponse\x12C\n" +
+	"\x0eRemoveWorkTree\x12\x19.provider.WorkTreeRequest\x1a\x16.provider.SyncResponseB6Z4github.com/ImTheCurse/ConflowCI/internal/provider/pbb\x06proto3"
 
 var (
-	file_proto_github_provider_proto_rawDescOnce sync.Once
-	file_proto_github_provider_proto_rawDescData []byte
+	file_proto_provider_provider_proto_rawDescOnce sync.Once
+	file_proto_provider_provider_proto_rawDescData []byte
 )
 
-func file_proto_github_provider_proto_rawDescGZIP() []byte {
-	file_proto_github_provider_proto_rawDescOnce.Do(func() {
-		file_proto_github_provider_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_proto_github_provider_proto_rawDesc), len(file_proto_github_provider_proto_rawDesc)))
+func file_proto_provider_provider_proto_rawDescGZIP() []byte {
+	file_proto_provider_provider_proto_rawDescOnce.Do(func() {
+		file_proto_provider_provider_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_proto_provider_provider_proto_rawDesc), len(file_proto_provider_provider_proto_rawDesc)))
 	})
-	return file_proto_github_provider_proto_rawDescData
+	return file_proto_provider_provider_proto_rawDescData
 }
 
-var file_proto_github_provider_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
-var file_proto_github_provider_proto_goTypes = []any{
-	(*SyncRequest)(nil),     // 0: github.SyncRequest
-	(*SyncResponse)(nil),    // 1: github.SyncResponse
-	(*WorkTreeRequest)(nil), // 2: github.WorkTreeRequest
-	(*SyncError)(nil),       // 3: github.SyncError
+var file_proto_provider_provider_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_proto_provider_provider_proto_goTypes = []any{
+	(*SyncRequest)(nil),     // 0: provider.SyncRequest
+	(*SyncResponse)(nil),    // 1: provider.SyncResponse
+	(*WorkTreeRequest)(nil), // 2: provider.WorkTreeRequest
+	(*SyncError)(nil),       // 3: provider.SyncError
 }
-var file_proto_github_provider_proto_depIdxs = []int32{
-	3, // 0: github.SyncResponse.error:type_name -> github.SyncError
-	0, // 1: github.GithubProvider.Clone:input_type -> github.SyncRequest
-	0, // 2: github.GithubProvider.Fetch:input_type -> github.SyncRequest
-	2, // 3: github.GithubProvider.CreateWorkTree:input_type -> github.WorkTreeRequest
-	2, // 4: github.GithubProvider.RemoveWorkTree:input_type -> github.WorkTreeRequest
-	1, // 5: github.GithubProvider.Clone:output_type -> github.SyncResponse
-	1, // 6: github.GithubProvider.Fetch:output_type -> github.SyncResponse
-	1, // 7: github.GithubProvider.CreateWorkTree:output_type -> github.SyncResponse
-	1, // 8: github.GithubProvider.RemoveWorkTree:output_type -> github.SyncResponse
+var file_proto_provider_provider_proto_depIdxs = []int32{
+	3, // 0: provider.SyncResponse.error:type_name -> provider.SyncError
+	0, // 1: provider.RepositoryProvider.Clone:input_type -> provider.SyncRequest
+	0, // 2: provider.RepositoryProvider.Fetch:input_type -> provider.SyncRequest
+	2, // 3: provider.RepositoryProvider.CreateWorkTree:input_type -> provider.WorkTreeRequest
+	2, // 4: provider.RepositoryProvider.RemoveWorkTree:input_type -> provider.WorkTreeRequest
+	1, // 5: provider.RepositoryProvider.Clone:output_type -> provider.SyncResponse
+	1, // 6: provider.RepositoryProvider.Fetch:output_type -> provider.SyncResponse
+	1, // 7: provider.RepositoryProvider.CreateWorkTree:output_type -> provider.SyncResponse
+	1, // 8: provider.RepositoryProvider.RemoveWorkTree:output_type -> provider.SyncResponse
 	5, // [5:9] is the sub-list for method output_type
 	1, // [1:5] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
@@ -345,26 +345,26 @@ var file_proto_github_provider_proto_depIdxs = []int32{
 	0, // [0:1] is the sub-list for field type_name
 }
 
-func init() { file_proto_github_provider_proto_init() }
-func file_proto_github_provider_proto_init() {
-	if File_proto_github_provider_proto != nil {
+func init() { file_proto_provider_provider_proto_init() }
+func file_proto_provider_provider_proto_init() {
+	if File_proto_provider_provider_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_github_provider_proto_rawDesc), len(file_proto_github_provider_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_provider_provider_proto_rawDesc), len(file_proto_provider_provider_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_proto_github_provider_proto_goTypes,
-		DependencyIndexes: file_proto_github_provider_proto_depIdxs,
-		MessageInfos:      file_proto_github_provider_proto_msgTypes,
+		GoTypes:           file_proto_provider_provider_proto_goTypes,
+		DependencyIndexes: file_proto_provider_provider_proto_depIdxs,
+		MessageInfos:      file_proto_provider_provider_proto_msgTypes,
 	}.Build()
-	File_proto_github_provider_proto = out.File
-	file_proto_github_provider_proto_goTypes = nil
-	file_proto_github_provider_proto_depIdxs = nil
+	File_proto_provider_provider_proto = out.File
+	file_proto_provider_provider_proto_goTypes = nil
+	file_proto_provider_provider_proto_depIdxs = nil
 }

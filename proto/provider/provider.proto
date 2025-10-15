@@ -1,9 +1,9 @@
 syntax = "proto3";
 
-package github;
-option go_package = "github.com/ImTheCurse/ConflowCI/internal/provider/github/pb";
+package provider;
+option go_package = "github.com/ImTheCurse/ConflowCI/internal/provider/pb";
 
-service GithubProvider{
+service RepositoryProvider{
     rpc Clone(SyncRequest) returns (SyncResponse);
     rpc Fetch(SyncRequest) returns (SyncResponse);
     rpc CreateWorkTree(WorkTreeRequest) returns (SyncResponse);

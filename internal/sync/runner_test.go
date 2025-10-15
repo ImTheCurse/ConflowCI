@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"strconv"
 	"testing"
 
 	"github.com/ImTheCurse/ConflowCI/internal/mq"
@@ -18,12 +17,13 @@ import (
 	"google.golang.org/grpc"
 )
 
-func RunGRPCServer() {
-	port := 8918
-	lis, err := net.Listen("tcp", ":"+strconv.Itoa(port))
+func RunGRPCConsumerServer(portCh chan int) {
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
-		logger.Fatalf("Failed to listen on port %d", port)
+		logger.Fatal("Failed to listen on RunGRPCConsumer server")
 	}
+	port := lis.Addr().(*net.TCPAddr).Port
+	portCh <- port
 	server := grpc.NewServer()
 
 	logger.Printf("Registering services...")
@@ -71,11 +71,12 @@ func TestRunTaskOnAllMachines(t *testing.T) {
 		t.Fatalf("Failed to chmod test1.sh: %v", err)
 	}
 
-	go RunGRPCServer()
+	ch := make(chan int)
+	go RunGRPCConsumerServer(ch)
 	ep := config.EndpointInfo{
 		Name: "test-1",
 		Host: "localhost",
-		Port: 8918,
+		Port: uint16(<-ch),
 		User: "user",
 	}
 

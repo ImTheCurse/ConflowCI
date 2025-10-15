@@ -10,15 +10,16 @@ var ErrInvalidBranchName = errors.New("Empty branch name")
 var ErrInvalidRepoName = errors.New("Empty repository name")
 
 // Gets the clone URL for the repository.
+// it returns the plain git clone url without
+// a formatted url with auth token.
 func (cfg *Config) GetCloneURL() string {
 	repo := cfg.Provider.Github.Repository
-	cloneURL := fmt.Sprintf("https://github.com/%v.git", repo)
+	return fmt.Sprintf("https://github.com/%v.git", repo)
 
-	if cfg.Provider.Github.Auth != nil {
-		token := cfg.Provider.Github.Auth.Token
-		cloneURL = fmt.Sprintf("https://ci:%v@github.com/%v.git", token, repo)
-	}
-	return cloneURL
+}
+
+func (cfg *Config) GetToken() string {
+	return cfg.Provider.Github.Auth.Token
 }
 
 // Validates the configuration for the provider.

@@ -63,14 +63,8 @@ func parseHost(host string) (EndpointInfo, error) {
 
 // Validates the configuration for the endpoint.
 func ValidateEndpoint(ep EndpointInfo) error {
-	if ep.User == "" {
-		return ErrInvalidUser
-	}
 	if ep.Host == "" {
 		return ErrInvalidHost
-	}
-	if ep.Port == 0 {
-		return ErrInvalidPortNum
 	}
 	if ep.Name == "" {
 		return ErrInvalidHostName

@@ -1,195 +1,255 @@
 package sync
 
-// func NewWorkerBuilder(cfg config.ValidatedConfig, remote, branch string) *WorkersBuilder {
-// 	return &WorkersBuilder{
-// 		Name:       cfg.Pipeline.Build.Name,
-// 		BuildID:    uuid.New(),
-// 		State:      StartingBuild,
-// 		RunsOn:     cfg.Endpoints,
-// 		Steps:      cfg.Pipeline.Build.BuildSteps,
-// 		CloneURL:   cfg.GetCloneURL(),
-// 		Remote:     remote,
-// 		BranchName: branch,
-// 	}
-// }
+import (
+	"bytes"
+	"context"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"sync"
+	"time"
 
-// func (wb *WorkersBuilder) BuildRepository(rb provider.RepositoryReader) []WorkerBuildOutput {
-// 	repoWithBranch := fmt.Sprintf("%s-%s", wb.Name, wb.BranchName)
-// 	path := filepath.Join("..", repoWithBranch)
-// 	dir := filepath.Join(BuildPath, wb.Name)
-// 	outputs := []WorkerBuildOutput{}
-// 	for _, ep := range wb.RunsOn {
-// 		sshCfg := ssh.SSHConnConfig{
-// 			Username:       ep.User,
-// 			PrivateKeyPath: ep.PrivateKeyPath,
-// 		}
-// 		cfg, err := sshCfg.BuildConfig()
-// 		if err != nil {
-// 			e := fmt.Errorf("Error building ssh config: %w", err)
-// 			outputs = append(outputs, WorkerBuildOutput{WorkerName: ep.Name, Output: "", Error: e})
-// 			continue
-// 		}
+	providerPB "github.com/ImTheCurse/ConflowCI/internal/provider/pb"
+	syncPB "github.com/ImTheCurse/ConflowCI/internal/sync/pb"
+	"github.com/ImTheCurse/ConflowCI/pkg/config"
+	"github.com/ImTheCurse/ConflowCI/pkg/grpc"
+	"github.com/google/uuid"
+	"github.com/pelletier/go-toml"
+)
 
-// 		conn, err := ssh.NewSSHConn(ep, cfg)
-// 		if err != nil {
-// 			e := fmt.Errorf("Error connecting to ssh: %w", err)
-// 			outputs = append(outputs, WorkerBuildOutput{WorkerName: ep.Name, Output: "", Error: e})
-// 			continue
-// 		}
-// 		// ensure connection is closed at each iteration
-// 		func() {
-// 			defer conn.Close()
-// 			err = wb.syncRepository(conn, rb)
-// 			if err != nil {
-// 				e := fmt.Errorf("Error syncing repository: %w", err)
-// 				outputs = append(outputs, WorkerBuildOutput{WorkerName: ep.Name, Output: "", Error: e})
-// 				return
-// 			}
+func NewWorkerBuilder(cfg config.ValidatedConfig, remote, branch, branchRef string) *WorkersBuilder {
+	return &WorkersBuilder{
+		Name:       cfg.Pipeline.Build.Name,
+		BuildID:    uuid.New(),
+		State:      StartingBuild,
+		RunsOn:     cfg.Endpoints,
+		Steps:      cfg.Pipeline.Build.BuildSteps,
+		CloneURL:   cfg.GetCloneURL(),
+		Remote:     remote,
+		BranchName: branch,
+		Token:      cfg.GetToken(),
+		BranchRef:  branchRef,
+	}
+}
 
-// 			err = rb.CreateWorkTree(conn, dir, path)
-// 			if err != nil {
-// 				e := fmt.Errorf("Error creating worktree for repository: %w", err)
-// 				outputs = append(outputs, WorkerBuildOutput{WorkerName: ep.Name, Output: "", Error: e})
-// 				return
-// 			}
+func NewWorkerBuilderServer(client providerPB.RepositoryProviderClient) *WorkerBuilderServer {
+	return &WorkerBuilderServer{provider: client}
+}
 
-// 			cdToWrkTree := "cd " + filepath.Join(dir, path)
-// 			buildCmd := strings.Join(wb.Steps, "&&")
-// 			cmd := cdToWrkTree + " && " + buildCmd
+func (s *WorkerBuilderServer) BuildRepo(cfg *syncPB.WorkerConfig) *syncPB.WorkerBuildOutput {
+	ctx := context.Background()
+	repoWithBranch := fmt.Sprintf("%s-%s", cfg.Req.Name, cfg.Req.BranchName)
+	path := filepath.Join("..", repoWithBranch)
+	dir := filepath.Join(os.ExpandEnv(BuildPath), cfg.Req.Name)
 
-// 			s, err := conn.NewSession()
-// 			if err != nil {
-// 				e := fmt.Errorf("Error creating ssh session at buildRepository: %w", err)
-// 				outputs = append(outputs, WorkerBuildOutput{WorkerName: ep.Name, Output: "", Error: e})
-// 				return
-// 			}
-// 			defer s.Close()
+	err := s.syncRepository(cfg)
+	if err != nil {
+		e := fmt.Sprintf("Error syncing repository: %s", err.Error())
+		return &syncPB.WorkerBuildOutput{WorkerName: cfg.WorkerName, Error: &syncPB.WorkerBuildError{Error: e}}
+	}
 
-// 			b, err := s.CombinedOutput(cmd)
-// 			if err != nil {
-// 				e := fmt.Errorf("Error trying to run build: %w", err)
-// 				outputs = append(outputs, WorkerBuildOutput{WorkerName: ep.Name, Output: string(b), Error: e})
-// 				return
-// 			}
-// 			err = rb.RemoveWorkTree(conn, dir, path)
-// 			if err != nil {
-// 				e := fmt.Errorf("Error removing worktree from repository: %w", err)
-// 				outputs = append(outputs, WorkerBuildOutput{WorkerName: ep.Name, Output: "", Error: e})
-// 				return
-// 			}
-// 			outputs = append(outputs, WorkerBuildOutput{WorkerName: ep.Name, Output: string(b), Error: nil})
-// 		}()
-// 	}
-// 	return outputs
-// }
+	branchName := strings.Split(cfg.Req.BranchRef, ":")[1]
+	wrkTreeReq := providerPB.WorkTreeRequest{
+		Name:            cfg.WorkerName,
+		RepoDir:         dir,
+		BranchName:      branchName,
+		WorktreeRelPath: "../" + cfg.Req.Name + "-" + cfg.Req.BranchName,
+	}
+	resp, err := s.provider.CreateWorkTree(ctx, &wrkTreeReq)
+	if resp.Error != nil || err != nil {
+		e := GetProtoWorkerError("Error creating work tree", err, resp)
+		return &syncPB.WorkerBuildOutput{WorkerName: cfg.WorkerName, Error: &syncPB.WorkerBuildError{Error: e}}
+	}
 
-// // SyncRepository syncs the repository to the latest commit of specified branch.
-// func (wb *WorkersBuilder) syncRepository(conn *goSSH.Client, rb provider.RepositoryReader) error {
+	cdToWrkTree := "cd " + filepath.Join(dir, path)
+	// Trim and filter steps
+	var steps []string
+	for _, step := range cfg.BuildSteps {
+		s := strings.TrimSpace(step)
+		if s != "" {
+			steps = append(steps, s)
+		}
+	}
 
-// 	path := filepath.Join(BuildPath, wb.Name)
-// 	logger.Printf("Syncing repository %s", path)
-// 	isMetadataExist := wb.checkMetadatFileExist(conn)
-// 	if isMetadataExist == false {
-// 		_, err := rb.Clone(conn, BuildPath)
-// 		if err != nil {
-// 			return err
-// 		}
-// 		_, err = rb.Fetch(conn, path)
-// 		if err != nil {
-// 			return err
-// 		}
-// 	} else {
-// 		_, err := rb.Fetch(conn, path)
-// 		if err != nil {
-// 			return err
-// 		}
-// 	}
+	var cmd string
+	if len(steps) != 0 {
+		buildCmd := strings.Join(steps, " && ")
+		cmd = cdToWrkTree + " && " + buildCmd
+	} else {
+		cmd = cdToWrkTree
+	}
+	logger.Printf("Executing command: %s", cmd)
 
-// 	// create or update metadata file in build directory.
-// 	err := wb.CreateMetadataFile(conn)
-// 	if err != nil {
-// 		return err
-// 	}
+	c := exec.Command("bash", "-c", cmd)
+	b, err := c.CombinedOutput()
+	if err != nil {
+		e := GetProtoWorkerError("Error running commands", err, resp)
+		return &syncPB.WorkerBuildOutput{WorkerName: cfg.WorkerName, Output: string(b), Error: &syncPB.WorkerBuildError{Error: e}}
+	}
+	resp, err = s.provider.RemoveWorkTree(ctx, &wrkTreeReq)
+	if err != nil {
+		e := GetProtoWorkerError("Error removing work tree", err, resp)
+		return &syncPB.WorkerBuildOutput{WorkerName: cfg.WorkerName, Error: &syncPB.WorkerBuildError{Error: e}}
+	}
+	return &syncPB.WorkerBuildOutput{WorkerName: cfg.WorkerName, Output: string(b)}
+}
 
-// 	return nil
-// }
+func (wb *WorkersBuilder) BuildAllEndpoints() []*syncPB.WorkerBuildOutput {
+	outputs := []*syncPB.WorkerBuildOutput{}
+	dir := filepath.Join(os.ExpandEnv(BuildPath), wb.Name)
 
-// func (wb *WorkersBuilder) checkMetadatFileExist(conn *goSSH.Client) bool {
-// 	logger.Printf("Checking .conflowci.toml metadata file exist...")
-// 	s, err := conn.NewSession()
-// 	if err != nil {
-// 		return false
-// 	}
-// 	defer s.Close()
-// 	path := filepath.Join(BuildPath, wb.Name, ".conflowci.toml")
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	wg.Add(len(wb.RunsOn))
+	appendToOutput := func(output *syncPB.WorkerBuildOutput) {
+		mu.Lock()
+		outputs = append(outputs, output)
+		mu.Unlock()
+	}
 
-// 	err = s.Run("cat " + path)
-// 	if err != nil {
-// 		return false
-// 	}
-// 	return true
-// }
+	for _, ep := range wb.RunsOn {
+		var addr string
+		if ep.Port == 0 {
+			addr = ep.Host
+		} else {
+			addr = fmt.Sprintf("%s:%d", ep.Host, ep.Port)
+		}
+		go func() {
+			defer wg.Done()
+			conn, err := grpc.CreateNewClientConnection(addr)
+			if err != nil {
+				e := GetProtoWorkerError("Error creating new client connection", err, nil)
+				appendToOutput(&syncPB.WorkerBuildOutput{WorkerName: ep.Name, Error: &syncPB.WorkerBuildError{Error: e}})
+			}
+			defer conn.Close()
 
-// // CreateMetadataFile creates a metadata file for the build.
-// // it performs a checksum and provide other relevant details like source of the repository, time of
-// // build and creation.
-// // it is the function user responsibilty to close the ssh client connection.
-// func (wb *WorkersBuilder) CreateMetadataFile(conn *goSSH.Client) error {
-// 	logger.Printf("Creating or updating metadata file...")
-// 	path := filepath.Join(BuildPath, wb.Name)
+			providerClient := providerPB.NewRepositoryProviderClient(conn)
+			s := WorkerBuilderServer{provider: providerClient}
+			workerCfg := syncPB.WorkerConfig{
+				WorkerName: ep.Name,
+				Req: &providerPB.SyncRequest{
+					Name:         wb.Name,
+					Dir:          dir,
+					CloneUrl:     wb.CloneURL,
+					BranchName:   wb.BranchName,
+					RemoteOrigin: wb.Remote,
+					Token:        wb.Token,
+					BranchRef:    wb.BranchRef,
+				},
+				BuildSteps: wb.Steps,
+			}
+			output := s.BuildRepo(&workerCfg)
+			appendToOutput(output)
+		}()
+	}
+	wg.Wait()
+	return outputs
+}
 
-// 	s, err := conn.NewSession()
-// 	if err != nil {
-// 		return err
-// 	}
-// 	defer s.Close()
+// SyncRepository syncs the repository to the latest commit of specified branch.
+func (s *WorkerBuilderServer) syncRepository(cfg *syncPB.WorkerConfig) error {
+	ctx := context.Background()
+	path := filepath.Join(os.ExpandEnv(BuildPath), cfg.Req.Name)
+	logger.Printf("Syncing repository %s", path)
+	isMetadataExist := s.checkMetadatFileExist(cfg.Req.Name)
 
-// 	logger.Printf("creating metadata file in path %s", path)
+	if isMetadataExist == false {
+		resp, err := s.provider.Clone(ctx, cfg.Req)
+		if err != nil {
+			return err
+		}
+		if resp.Error != nil {
+			return fmt.Errorf("%s", resp.Error.Reason)
+		}
+		resp, err = s.provider.Fetch(ctx, cfg.Req)
+		if err != nil {
+			return err
+		}
+		if resp.Error != nil {
+			return fmt.Errorf("%s", resp.Error.Reason)
+		}
+	} else {
+		resp, err := s.provider.Fetch(ctx, cfg.Req)
+		if err != nil {
+			return err
+		}
+		if resp.Error != nil {
+			return fmt.Errorf("%s", resp.Error.Reason)
+		}
+	}
 
-// 	cmd := fmt.Sprintf(`mkdir -p %s && find %s -type f \
-//   ! -path "*/.git/*" \
-//   ! -path "*/.conflowci.toml" \
-//   -exec sha256sum {} + | sort | sha256sum
-// `, path, path)
+	// create or update metadata file in build directory.
+	err := s.createMetadataFile(cfg)
+	if err != nil {
+		return err
+	}
 
-// 	b, err := s.CombinedOutput(cmd)
-// 	if err != nil {
-// 		logger.Printf("checksum output: %v", string(b))
-// 		return CheckSumError{message: err.Error()}
-// 	}
-// 	hash := strings.Split(string(b), " ")[0]
+	return nil
+}
 
-// 	metadata := BuildMetadata{
-// 		Repository: RepositoryMetadata{
-// 			Name:    wb.Name,
-// 			Source:  wb.CloneURL,
-// 			Version: config.ConflowVersion,
-// 		},
-// 		State: StateMetadata{
-// 			ClonedAt:  time.Now().Format(time.RFC3339),
-// 			LastBuild: time.Now().Format(time.RFC3339),
-// 			Checksum:  hash,
-// 		},
-// 	}
+func (_ *WorkerBuilderServer) checkMetadatFileExist(name string) bool {
+	logger.Printf("Checking .conflowci.toml metadata file exist...")
+	path := filepath.Join(BuildPath, name, ".conflowci.toml")
 
-// 	metadataPath := filepath.Join(path, ".conflowci.toml")
+	cmd := exec.Command("cat", path)
+	err := cmd.Run()
+	if err != nil {
+		return false
+	}
+	return true
+}
 
-// 	var buf bytes.Buffer
-// 	err = toml.NewEncoder(&buf).Encode(metadata)
-// 	if err != nil {
-// 		return MetadataEncodeError{message: err.Error()}
-// 	}
+// CreateMetadataFile creates a metadata file for the build.
+// it performs a checksum and provide other relevant details like source of the repository, time of
+// build and creation.
+// TODO: hash the repo in go and don't rely on linux utilities to do so
+// in an attempt to keep cross compability
+func (s *WorkerBuilderServer) createMetadataFile(cfg *syncPB.WorkerConfig) error {
+	path := filepath.Join(BuildPath, cfg.Req.Name)
+	logger.Printf("creating metadata file in path %s", path)
 
-// 	metadataWriteSession, err := conn.NewSession()
-// 	if err != nil {
-// 		return err
-// 	}
-// 	defer s.Close()
+	cmd := fmt.Sprintf(`mkdir -p %s && find %s -type f \
+  ! -path "*/.git/*" \
+  ! -path "*/.conflowci.toml" \
+  -exec sha256sum {} + | sort | sha256sum
+`, path, path)
 
-// 	cmd = fmt.Sprintf(`echo '%s' > %s`, buf.String(), metadataPath)
-// 	_, err = metadataWriteSession.CombinedOutput(cmd)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	return nil
-// }
+	c := exec.Command("bash", "-c", cmd)
+	b, err := c.CombinedOutput()
+	if err != nil {
+		logger.Printf("checksum output: %v", string(b))
+		return CheckSumError{message: err.Error()}
+	}
+	hash := strings.Split(string(b), " ")[0]
+
+	metadata := BuildMetadata{
+		Repository: RepositoryMetadata{
+			Name:    cfg.Req.Name,
+			Source:  cfg.Req.CloneUrl,
+			Version: config.ConflowVersion,
+		},
+		State: StateMetadata{
+			ClonedAt:  time.Now().Format(time.RFC3339),
+			LastBuild: time.Now().Format(time.RFC3339),
+			Checksum:  hash,
+		},
+	}
+
+	metadataPath := filepath.Join(path, ".conflowci.toml")
+
+	var buf bytes.Buffer
+	err = toml.NewEncoder(&buf).Encode(metadata)
+	if err != nil {
+		return MetadataEncodeError{message: err.Error()}
+	}
+
+	cmd = fmt.Sprintf(`echo '%s' > %s`, buf.String(), metadataPath)
+	c = exec.Command("sh", "-c", cmd)
+	_, err = c.CombinedOutput()
+	if err != nil {
+		return err
+	}
+	return nil
+}

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/ImTheCurse/ConflowCI/internal/provider/github/pb"
+	"github.com/ImTheCurse/ConflowCI/internal/provider/pb"
 	"google.golang.org/protobuf/proto"
 )
 

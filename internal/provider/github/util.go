@@ -6,7 +6,7 @@ import (
 	"os"
 	"os/exec"
 
-	pb "github.com/ImTheCurse/ConflowCI/internal/provider/github/pb"
+	pb "github.com/ImTheCurse/ConflowCI/internal/provider/pb"
 	git "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -34,12 +34,13 @@ func (reader *GitRepoReader) Clone(ctx context.Context, req *pb.SyncRequest) (*p
 		Auth:          auth,
 		URL:           cloneURL,
 		ReferenceName: plumbing.NewBranchReferenceName(branchName),
+		RemoteName:    "origin",
 		SingleBranch:  true,
 		Depth:         1,
 	})
 	if err != nil {
 		return &pb.SyncResponse{Error: &pb.SyncError{
-			Reason: fmt.Sprintf("Failed to clone URL: %v | branch: %v", cloneURL, branchName),
+			Reason: fmt.Sprintf("Failed to clone URL: %v | branch: %v | error: %s", cloneURL, branchName, err.Error()),
 		},
 			Output: "",
 		}, nil

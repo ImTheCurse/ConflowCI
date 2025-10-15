@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 
+	providerPB "github.com/ImTheCurse/ConflowCI/internal/provider/pb"
 	"github.com/ImTheCurse/ConflowCI/pkg/config"
 	"github.com/google/uuid"
 )
@@ -66,7 +67,8 @@ func (s BuildState) String() string {
 	}
 }
 
-const BuildPath string = "$HOME/conflowci/build"
+var BuildPath string = os.ExpandEnv("$HOME/conflowci/build")
+
 const metadataFileName string = ".conflowci.toml"
 
 // TaskExecutor represents a task syncing for remote machines
@@ -83,6 +85,9 @@ type TaskExecutor struct {
 	Errors  []string
 }
 
+type WorkerBuilderServer struct {
+	provider providerPB.RepositoryProviderClient
+}
 type WorkersBuilder struct {
 	Name       string
 	BuildID    uuid.UUID
@@ -92,12 +97,8 @@ type WorkersBuilder struct {
 	CloneURL   string
 	Remote     string
 	BranchName string
-}
-
-type WorkerBuildOutput struct {
-	WorkerName string
-	Output     string
-	Error      error
+	Token      string
+	BranchRef  string
 }
 
 type BuildMetadata struct {

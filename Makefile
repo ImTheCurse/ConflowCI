@@ -6,11 +6,11 @@ PROTOC_GEN_FLAGS = \
   --go_opt=module=github.com/ImTheCurse/ConflowCI \
   --go-grpc_opt=module=github.com/ImTheCurse/ConflowCI
 
-github-proto:
-	protoc $(PROTOC_GEN_FLAGS) proto/github/provider.proto
+provider-proto:
+	protoc $(PROTOC_GEN_FLAGS) proto/provider/provider.proto
 
 sync-proto:
-	protoc $(PROTOC_GEN_FLAGS) proto/sync/exec.proto
+	protoc $(PROTOC_GEN_FLAGS) --proto_path=proto proto/sync/exec.proto proto/sync/build.proto
 
 mq-proto:
 	protoc $(PROTOC_GEN_FLAGS) proto/mq/consume.proto

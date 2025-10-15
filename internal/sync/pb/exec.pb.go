@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.10
 // 	protoc        v3.21.12
-// source: proto/sync/exec.proto
+// source: sync/exec.proto
 
 package pb
 
@@ -31,7 +31,7 @@ type TaskFileFinder struct {
 
 func (x *TaskFileFinder) Reset() {
 	*x = TaskFileFinder{}
-	mi := &file_proto_sync_exec_proto_msgTypes[0]
+	mi := &file_sync_exec_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -43,7 +43,7 @@ func (x *TaskFileFinder) String() string {
 func (*TaskFileFinder) ProtoMessage() {}
 
 func (x *TaskFileFinder) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_sync_exec_proto_msgTypes[0]
+	mi := &file_sync_exec_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -56,7 +56,7 @@ func (x *TaskFileFinder) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TaskFileFinder.ProtoReflect.Descriptor instead.
 func (*TaskFileFinder) Descriptor() ([]byte, []int) {
-	return file_proto_sync_exec_proto_rawDescGZIP(), []int{0}
+	return file_sync_exec_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *TaskFileFinder) GetPattern() string {
@@ -82,7 +82,7 @@ type FileList struct {
 
 func (x *FileList) Reset() {
 	*x = FileList{}
-	mi := &file_proto_sync_exec_proto_msgTypes[1]
+	mi := &file_sync_exec_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -94,7 +94,7 @@ func (x *FileList) String() string {
 func (*FileList) ProtoMessage() {}
 
 func (x *FileList) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_sync_exec_proto_msgTypes[1]
+	mi := &file_sync_exec_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -107,7 +107,7 @@ func (x *FileList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FileList.ProtoReflect.Descriptor instead.
 func (*FileList) Descriptor() ([]byte, []int) {
-	return file_proto_sync_exec_proto_rawDescGZIP(), []int{1}
+	return file_sync_exec_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *FileList) GetFiles() []string {
@@ -117,11 +117,11 @@ func (x *FileList) GetFiles() []string {
 	return nil
 }
 
-var File_proto_sync_exec_proto protoreflect.FileDescriptor
+var File_sync_exec_proto protoreflect.FileDescriptor
 
-const file_proto_sync_exec_proto_rawDesc = "" +
+const file_sync_exec_proto_rawDesc = "" +
 	"\n" +
-	"\x15proto/sync/exec.proto\x12\x04sync\"G\n" +
+	"\x0fsync/exec.proto\x12\x04sync\"G\n" +
 	"\x0eTaskFileFinder\x12\x18\n" +
 	"\apattern\x18\x01 \x01(\tR\apattern\x12\x1b\n" +
 	"\tbuild_dir\x18\x02 \x01(\tR\bbuildDir\" \n" +
@@ -131,23 +131,23 @@ const file_proto_sync_exec_proto_rawDesc = "" +
 	"\x0fGetFilesByRegex\x12\x14.sync.TaskFileFinder\x1a\x0e.sync.FileListB2Z0github.com/ImTheCurse/ConflowCI/internal/sync/pbb\x06proto3"
 
 var (
-	file_proto_sync_exec_proto_rawDescOnce sync.Once
-	file_proto_sync_exec_proto_rawDescData []byte
+	file_sync_exec_proto_rawDescOnce sync.Once
+	file_sync_exec_proto_rawDescData []byte
 )
 
-func file_proto_sync_exec_proto_rawDescGZIP() []byte {
-	file_proto_sync_exec_proto_rawDescOnce.Do(func() {
-		file_proto_sync_exec_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_proto_sync_exec_proto_rawDesc), len(file_proto_sync_exec_proto_rawDesc)))
+func file_sync_exec_proto_rawDescGZIP() []byte {
+	file_sync_exec_proto_rawDescOnce.Do(func() {
+		file_sync_exec_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_sync_exec_proto_rawDesc), len(file_sync_exec_proto_rawDesc)))
 	})
-	return file_proto_sync_exec_proto_rawDescData
+	return file_sync_exec_proto_rawDescData
 }
 
-var file_proto_sync_exec_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
-var file_proto_sync_exec_proto_goTypes = []any{
+var file_sync_exec_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_sync_exec_proto_goTypes = []any{
 	(*TaskFileFinder)(nil), // 0: sync.TaskFileFinder
 	(*FileList)(nil),       // 1: sync.FileList
 }
-var file_proto_sync_exec_proto_depIdxs = []int32{
+var file_sync_exec_proto_depIdxs = []int32{
 	0, // 0: sync.FileExtractor.GetFilesByRegex:input_type -> sync.TaskFileFinder
 	1, // 1: sync.FileExtractor.GetFilesByRegex:output_type -> sync.FileList
 	1, // [1:2] is the sub-list for method output_type
@@ -157,26 +157,26 @@ var file_proto_sync_exec_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for field type_name
 }
 
-func init() { file_proto_sync_exec_proto_init() }
-func file_proto_sync_exec_proto_init() {
-	if File_proto_sync_exec_proto != nil {
+func init() { file_sync_exec_proto_init() }
+func file_sync_exec_proto_init() {
+	if File_sync_exec_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_sync_exec_proto_rawDesc), len(file_proto_sync_exec_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_sync_exec_proto_rawDesc), len(file_sync_exec_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_proto_sync_exec_proto_goTypes,
-		DependencyIndexes: file_proto_sync_exec_proto_depIdxs,
-		MessageInfos:      file_proto_sync_exec_proto_msgTypes,
+		GoTypes:           file_sync_exec_proto_goTypes,
+		DependencyIndexes: file_sync_exec_proto_depIdxs,
+		MessageInfos:      file_sync_exec_proto_msgTypes,
 	}.Build()
-	File_proto_sync_exec_proto = out.File
-	file_proto_sync_exec_proto_goTypes = nil
-	file_proto_sync_exec_proto_depIdxs = nil
+	File_sync_exec_proto = out.File
+	file_sync_exec_proto_goTypes = nil
+	file_sync_exec_proto_depIdxs = nil
 }

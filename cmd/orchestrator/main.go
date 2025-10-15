@@ -5,7 +5,7 @@ import (
 	"flag"
 	"log"
 
-	githubPb "github.com/ImTheCurse/ConflowCI/internal/provider/github/pb"
+	ProviderPB "github.com/ImTheCurse/ConflowCI/internal/provider/pb"
 	grpcUtil "github.com/ImTheCurse/ConflowCI/pkg/grpc"
 )
 
@@ -23,7 +23,7 @@ func main() {
 	defer conn.Close()
 
 	ctx := context.Background()
-	req := githubPb.SyncRequest{
+	req := ProviderPB.SyncRequest{
 		Name:         "demo-repo",
 		CloneUrl:     "https://github.com/ImTheCurse/demo-repo",
 		BranchRef:    "pull/6/head:pr-6",
@@ -31,7 +31,7 @@ func main() {
 		RemoteOrigin: "origin",
 		Dir:          "/tmp/build-test",
 	}
-	client := githubPb.NewGithubProviderClient(conn)
+	client := ProviderPB.NewRepositoryProviderClient(conn)
 	resp, err := client.Clone(ctx, &req)
 	if err != nil {
 		log.Fatalf("failed to clone repo: %v", err)
