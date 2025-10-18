@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/ImTheCurse/ConflowCI/internal/mq"
 	mqpb "github.com/ImTheCurse/ConflowCI/internal/mq/pb"
@@ -81,6 +82,7 @@ func (te *TaskExecutor) RunTaskOnAllMachines() error {
 	}
 
 	consumersReady.Wait()
+	time.Sleep(3 * time.Second)
 	for i, cmd := range te.Cmds {
 		p, err := mq.NewPublisher(uri, mq.ExchangeName)
 		if err != nil {

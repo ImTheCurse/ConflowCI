@@ -4,36 +4,15 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"net"
 	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
 
 	"github.com/ImTheCurse/ConflowCI/internal/mq"
-	mqpb "github.com/ImTheCurse/ConflowCI/internal/mq/pb"
 	"github.com/ImTheCurse/ConflowCI/pkg/config"
 	grpcUtil "github.com/ImTheCurse/ConflowCI/pkg/grpc"
-	"google.golang.org/grpc"
 )
-
-func RunGRPCConsumerServer(portCh chan int) {
-	lis, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		logger.Fatal("Failed to listen on RunGRPCConsumer server")
-	}
-	port := lis.Addr().(*net.TCPAddr).Port
-	portCh <- port
-	server := grpc.NewServer()
-
-	logger.Printf("Registering services...")
-	mqpb.RegisterConsumerServicerServer(server, &mq.ConsumerServer{})
-
-	logger.Printf("gRPC server Listening on port %d", port)
-	if err := server.Serve(lis); err != nil {
-		logger.Fatalf("Failed to serve gRPC server: %v", err)
-	}
-}
 
 func TestRunTaskOnAllMachines(t *testing.T) {
 	grpcUtil.DefineFlags()
@@ -61,6 +40,10 @@ func TestRunTaskOnAllMachines(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create test1.sh: %v", err)
 	}
+	defer f.Close()
+	if err != nil {
+		t.Fatalf("Failed to create test1.sh: %v", err)
+	}
 	_, err = f.WriteString(`#!/bin/sh
 		echo "hello-world!"`)
 	if err != nil {
@@ -70,9 +53,9 @@ func TestRunTaskOnAllMachines(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to chmod test1.sh: %v", err)
 	}
-
+	f.Close()
 	ch := make(chan int)
-	go RunGRPCConsumerServer(ch)
+	go mq.RunGRPCConsumerServer(ch)
 	ep := config.EndpointInfo{
 		Name: "test-1",
 		Host: "localhost",

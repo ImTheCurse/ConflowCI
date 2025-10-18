@@ -2,19 +2,20 @@ package mq
 
 import (
 	"context"
-	"fmt"
-	"os"
-	"strconv"
+	"flag"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/ImTheCurse/ConflowCI/pkg/crypto"
-	conflowSSH "github.com/ImTheCurse/ConflowCI/pkg/ssh"
-	"golang.org/x/crypto/ssh"
+	pb "github.com/ImTheCurse/ConflowCI/internal/mq/pb"
+	"github.com/ImTheCurse/ConflowCI/pkg/config"
+	"github.com/ImTheCurse/ConflowCI/pkg/grpc"
 )
 
 func TestMessageQueue(t *testing.T) {
+	grpc.DefineFlags()
+	*grpc.TlsFlag = false
+	flag.Parse()
 	ctx := context.Background()
 	logger.Printf("Creating Container RabbitMQ")
 	c, connURI, err := CreateMessageQueueContainer()
@@ -24,38 +25,7 @@ func TestMessageQueue(t *testing.T) {
 	defer c.Terminate(ctx)
 	logger.Printf("Container RabbitMQ created")
 
-	pub, _, err := crypto.GenerateKeys()
-	if err != nil {
-		t.Errorf("Failed to generate keys: %v", err)
-	}
-	defer os.RemoveAll("keys")
-
-	container, err := conflowSSH.CreateSSHServerContainer(string(pub))
-	if err != nil {
-		t.Errorf("Failed to start SSH server container: %v", err)
-	}
-	fmt.Println("SSH server running at", conflowSSH.Ep.Host, conflowSSH.Ep.Port)
-	defer container.Terminate(ctx)
-
-	port := strconv.Itoa(int(conflowSSH.Ep.Port))
-	err = conflowSSH.AddHostKeyToKnownHosts(conflowSSH.Ep.Host, port)
-	if err != nil {
-		t.Errorf("Failed to add host key to known hosts: %v", err)
-	}
-
-	cfg, err := conflowSSH.CreateTestConfig()
-	if err != nil {
-		t.Errorf("Failed to create SSH config: %v", err)
-	}
-
-	conn, err := conflowSSH.NewSSHConn(conflowSSH.Ep, cfg)
-	if err != nil {
-		t.Errorf("Failed to create SSH connection: %v", err)
-	}
-	defer conn.Close()
-
 	logger.Printf("Creating Publisher")
-
 	// retry connection a few times
 	var p *Publisher
 	for _ = range 5 {
@@ -84,41 +54,66 @@ func TestMessageQueue(t *testing.T) {
 	}
 	defer consumer.Close()
 
-	m := "hello-world!"
-	ctx, cancelCtx := context.WithTimeout(context.Background(), 5*time.Second)
+	m := `echo "hello-world!"`
+	ctx, cancelCtx := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancelCtx()
 
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-	done := make(chan error, 1)
-	handler := func(msg []byte, _ *ssh.Session) (string, error) {
-		recievedMsg := string(msg)
-		if recievedMsg == m {
-			logger.Printf("Received message: %s", recievedMsg)
-			done <- nil
-			return recievedMsg, nil
-		}
-		done <- fmt.Errorf("Expected message: %s got: %s", m, recievedMsg)
-		return "", fmt.Errorf("Expected message: %s got: %s", m, recievedMsg)
+	ch := make(chan int, 1)
+	go RunGRPCConsumerServer(ch)
+	ep := config.EndpointInfo{
+		Name: "test-1",
+		Host: "localhost",
+		Port: uint16(<-ch),
+		User: "user",
 	}
-	logger.Printf("Starting Consumption")
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		logger.Printf("Starting Consumption")
+		req := pb.ConsumerCommandRequest{
+			MqUrl:    connURI,
+			Exchange: ExchangeName,
+			Params: map[string]string{
+				QueueNameCmd:    RoutingKeyCmdQueue,
+				QueueNameOutput: RoutingKeyOutputQueue,
+				QueueNameError:  RoutingKeyErrorOutputQueue,
+			},
+			Tag: "test",
+		}
+		conn, err := grpc.CreateNewClientConnection(ep.GetEndpointURL())
+		if err != nil {
+			logger.Printf("Error creating gRPC connection: %v", err)
+			return
+		}
+		client := pb.NewConsumerServicerClient(conn)
+		stream, err := client.StartConsumer(ctx, &req)
+		if err != nil {
+			t.Errorf("Failed to consume command: %v", err)
+		}
+		for {
+			msg, err := stream.Recv()
+			if err != nil {
+				t.Errorf("Stream error.")
+			}
 
-	go consumer.ConsumeCommand(ctx, &wg, conn, handler)
+			if msg.FinishedCommand != nil {
+				logger.Println("Command finished.")
+				wg.Done()
+				return
+			}
+
+			if msg.Error != nil {
+				t.Errorf("Error received from remote machine: %v", msg.Error)
+			}
+			logger.Printf("Output received from remote machine: %v", msg.Output)
+		}
+	}()
 
 	if err := p.Publish(ctx, RoutingKeyCmdQueue, []byte(m)); err != nil {
 		t.Errorf("Failed to publish message: %v", err)
 	}
 	logger.Printf("Published message")
-
 	wg.Wait()
-	select {
-	case err := <-done:
-		if err != nil {
-			t.Errorf("Failed to receive message: %v", err)
-		}
-	case <-ctx.Done():
-		t.Fatal("timeout waiting for message")
-	}
 }
 
 func TestNewConsumerErrors(t *testing.T) {

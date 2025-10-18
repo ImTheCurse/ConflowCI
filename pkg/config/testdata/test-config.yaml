@@ -8,10 +8,8 @@ provider:
 hosts:
   - name: test-node-1
     address: 192.168.1.101:8871
-    private_key_path: ./$CONFLOW_TEST_DIR/fake_id_rsa
   - name: test-node-2
     address: test.example.com
-    private_key_path: ./$CONFLOW_TEST_DIR/fake_id_rsa
 
 environment:
   # Variables shared across hosts

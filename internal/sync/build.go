@@ -191,7 +191,7 @@ func (s *WorkerBuilderServer) syncRepository(cfg *syncPB.WorkerConfig) error {
 
 func (_ *WorkerBuilderServer) checkMetadatFileExist(name string) bool {
 	logger.Printf("Checking .conflowci.toml metadata file exist...")
-	path := filepath.Join(BuildPath, name, ".conflowci.toml")
+	path := filepath.Join(BuildPath, name, metadataFileName)
 
 	cmd := exec.Command("cat", path)
 	err := cmd.Run()
@@ -237,7 +237,7 @@ func (s *WorkerBuilderServer) createMetadataFile(cfg *syncPB.WorkerConfig) error
 		},
 	}
 
-	metadataPath := filepath.Join(path, ".conflowci.toml")
+	metadataPath := filepath.Join(path, metadataFileName)
 
 	var buf bytes.Buffer
 	err = toml.NewEncoder(&buf).Encode(metadata)

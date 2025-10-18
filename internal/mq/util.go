@@ -3,10 +3,13 @@ package mq
 import (
 	"context"
 	"fmt"
+	"net"
 	"time"
 
+	pb "github.com/ImTheCurse/ConflowCI/internal/mq/pb"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
+	"google.golang.org/grpc"
 )
 
 func CreateMessageQueueContainer() (testcontainers.Container, string, error) {
@@ -41,4 +44,22 @@ func CreateMessageQueueContainer() (testcontainers.Container, string, error) {
 	logger.Printf("RabbitMQ container started on %s:%s", host, mp)
 	return rmqC, amqpURL, nil
 
+}
+
+func RunGRPCConsumerServer(portCh chan int) {
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		logger.Fatal("Failed to listen on RunGRPCConsumer server")
+	}
+	port := lis.Addr().(*net.TCPAddr).Port
+	server := grpc.NewServer()
+
+	logger.Printf("Registering services...")
+	pb.RegisterConsumerServicerServer(server, &ConsumerServer{})
+
+	portCh <- port
+	logger.Printf("gRPC server Listening on port %d", port)
+	if err := server.Serve(lis); err != nil {
+		logger.Fatalf("Failed to serve gRPC server: %v", err)
+	}
 }

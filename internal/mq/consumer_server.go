@@ -29,13 +29,13 @@ func (s *ConsumerServer) StartConsumer(req *pb.ConsumerCommandRequest,
 	if err != nil {
 		e := fmt.Sprintf("Failed to get message queue by consumer, got err : %s", err.Error())
 		stream.Send(&pb.ConsumerCommandResponse{Error: &pb.ConsumerError{Reason: e}})
-		return fmt.Errorf(e)
+		return fmt.Errorf("%s", e)
 	}
 	err = consumer.ConsumeCommand(stream.Context(), stream)
 	if err != nil {
 		e := fmt.Sprintf("Failed to consume commands, got: %s", err)
 		stream.Send(&pb.ConsumerCommandResponse{Error: &pb.ConsumerError{Reason: e}})
-		return fmt.Errorf(e)
+		return fmt.Errorf("%s", e)
 	}
 	return nil
 }

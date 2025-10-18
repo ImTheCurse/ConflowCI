@@ -36,10 +36,9 @@ type Environment struct {
 }
 
 type Host struct {
-	Name           string    `yaml:"name"`              // host human readable name
-	Address        string    `yaml:"address"`           // local/public accesible address
-	PrivateKeyPath string    `yaml:"private_key_path"`  // path to private key for SSH authentication
-	InstallSteps   *[]string `yaml:"install,omitempty"` // Bootstraping host machine
+	Name         string    `yaml:"name"`              // host human readable name
+	Address      string    `yaml:"address"`           // local/public accesible address
+	InstallSteps *[]string `yaml:"install,omitempty"` // Bootstraping host machine
 }
 
 type Pipeline struct {
@@ -73,9 +72,11 @@ type ValidatedConfig struct {
 }
 
 type EndpointInfo struct {
-	Name           string //matches the name of the host in the config's Host
-	User           string
-	Host           string
-	Port           uint16
-	PrivateKeyPath string // path to private key for SSH authentication
+	Name string //matches the name of the host in the config's Host
+	User string
+	Host string
+	Port uint16
+	// path to private key for SSH authentication, currently only used if nessacery to ssh into
+	// a machine.
+	PrivateKeyPath string
 }

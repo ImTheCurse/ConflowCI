@@ -71,7 +71,7 @@ func TestCreateMetadataFile(t *testing.T) {
 		t.Fatalf("CreateMetadataFile returned error: %v", err)
 	}
 
-	metadataPath := filepath.Join(os.ExpandEnv(BuildPath), cfg.Req.Name, ".conflowci.toml")
+	metadataPath := filepath.Join(os.ExpandEnv(BuildPath), cfg.Req.Name, metadataFileName)
 
 	cmd := exec.Command("cat", metadataPath)
 	b, err := cmd.CombinedOutput()

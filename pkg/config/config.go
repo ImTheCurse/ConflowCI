@@ -7,6 +7,20 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+var Cfg *ValidatedConfig = nil
+
+func GetConfig(filename string) (*ValidatedConfig, error) {
+	if Cfg != nil {
+		return Cfg, nil
+	}
+	c, err := NewConfig(filename)
+	Cfg = c
+	if err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
 // NewConfig creates a new validated Config instance from a YAML file,
 // the function also expands environment variables for the Enviornmet
 // field and the auth field in the github provider.
@@ -27,10 +41,7 @@ func NewConfig(filename string) (*ValidatedConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = cfg.ExpandPrivKeyPath()
-	if err != nil {
-		return nil, err
-	}
+
 	logger.Println("Expanded env, validating config fields...")
 	cfg.ValidatePipeline()
 	cfg.ValidateProvider()

@@ -19,6 +19,9 @@ func (cfg *Config) GetCloneURL() string {
 }
 
 func (cfg *Config) GetToken() string {
+	if cfg.Provider.Github.Auth == nil {
+		return ""
+	}
 	return cfg.Provider.Github.Auth.Token
 }
 

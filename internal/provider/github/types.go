@@ -18,6 +18,7 @@ type PullRequestPayload struct {
 
 // PullRequest contains the details about the PR itself
 type PullRequest struct {
+	ID           int    `json:"id"`
 	Title        string `json:"title"`
 	User         User   `json:"user"` // who opened the PR
 	OriginBranch Branch `json:"head"` // source branch

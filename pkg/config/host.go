@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 )
@@ -12,7 +11,6 @@ func (cfg *Config) ValidateParseHosts() ([]EndpointInfo, error) {
 	for _, host := range cfg.Hosts {
 		ep, err := parseHost(host.Address)
 		ep.Name = host.Name
-		ep.PrivateKeyPath = host.PrivateKeyPath
 		if err != nil {
 			return []EndpointInfo{}, err
 		}
@@ -24,21 +22,6 @@ func (cfg *Config) ValidateParseHosts() ([]EndpointInfo, error) {
 		endpoints = append(endpoints, ep)
 	}
 	return endpoints, nil
-}
-
-// Expands the relative path for each host, returns an error if the file path dosen't exist.
-func (cfg *Config) ExpandPrivKeyPath() error {
-	for i, host := range cfg.Hosts {
-		keyPath := host.PrivateKeyPath
-		realPath := os.ExpandEnv(keyPath)
-
-		if _, err := os.Stat(realPath); os.IsNotExist(err) {
-			return fmt.Errorf("private key file %s for host %s does not exist", realPath, host.Name)
-		}
-
-		cfg.Hosts[i].PrivateKeyPath = realPath
-	}
-	return nil
 }
 
 // Parses a host string into an EndpointInfo struct.
@@ -68,9 +51,6 @@ func ValidateEndpoint(ep EndpointInfo) error {
 	}
 	if ep.Name == "" {
 		return ErrInvalidHostName
-	}
-	if ep.PrivateKeyPath == "" {
-		return ErrInvalidPrivateKeyPath
 	}
 	return nil
 }
