@@ -31,12 +31,27 @@ func HandleWebhook(ctx *fiber.Ctx, cfg config.ValidatedConfig) error {
 		return fiber.ErrBadRequest
 	}
 
-	// "pull/6/head:pr-6"
 	refSpec := fmt.Sprintf("pull/%d/head:pr-%d", payload.Number, payload.PullRequest.ID)
 	wb := sync.NewWorkerBuilder(cfg, "origin", payload.PullRequest.OriginBranch.Ref, refSpec)
 	outputs := wb.BuildAllEndpoints()
 
-	logger.Printf("Outputs: %v", outputs)
+	for _, job := range cfg.Pipeline.Tasks {
+		logger.Printf("Running task: %s", job.Name)
+		te, err := sync.NewTaskExecutor(cfg, job, wb.Name)
+		if err != nil {
+			logger.Printf("Failed to create task executor for task: %s", job.Name)
+			continue
+		}
+		err = te.RunTaskOnAllMachines()
+		if err != nil {
+			logger.Printf("Failed to run task: %s", job.Name)
+		}
+		logger.Printf("%s runner output: %v", job.Name, te.Outputs)
+	}
+	errs := wb.RemoveAllRepositoryWorkspaces()
+
+	logger.Printf("RemoveAllRepositoryWorkspaces errors: %v", errs)
+	logger.Printf("Build Outputs: %v", outputs)
 
 	return ctx.SendStatus(fiber.StatusOK)
 }

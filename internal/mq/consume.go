@@ -167,6 +167,7 @@ func (c *Consumer) ConsumeQueueContents(wg *sync.WaitGroup, done chan struct{}, 
 		case d, ok := <-msgs:
 			if ok {
 				*buf = append(*buf, string(d.Body))
+				logger.Println("wg done in @Consumer.ConsumeQueueContents")
 				wg.Done()
 				_ = d.Ack(false)
 			}

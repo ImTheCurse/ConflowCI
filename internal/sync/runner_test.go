@@ -73,7 +73,7 @@ func TestRunTaskOnAllMachines(t *testing.T) {
 		RunsOn:   []string{"test-1"},
 	}
 
-	te, err := NewTaskExecutor(valCfg, taskConsumer)
+	te, err := NewTaskExecutor(valCfg, taskConsumer, "")
 	if err != nil {
 		t.Errorf("Failed to create task executor: %v", err)
 	}

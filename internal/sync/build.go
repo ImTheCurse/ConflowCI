@@ -3,6 +3,7 @@ package sync
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -17,6 +18,8 @@ import (
 	"github.com/ImTheCurse/ConflowCI/pkg/grpc"
 	"github.com/google/uuid"
 	"github.com/pelletier/go-toml"
+	googleGrpc "google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func NewWorkerBuilder(cfg config.ValidatedConfig, remote, branch, branchRef string) *WorkersBuilder {
@@ -38,8 +41,8 @@ func NewWorkerBuilderServer(client providerPB.RepositoryProviderClient) *WorkerB
 	return &WorkerBuilderServer{provider: client}
 }
 
-func (s *WorkerBuilderServer) BuildRepo(cfg *syncPB.WorkerConfig) *syncPB.WorkerBuildOutput {
-	ctx := context.Background()
+func (s *WorkerBuilderServer) BuildRepository(ctx context.Context, cfg *syncPB.WorkerConfig) (
+	*syncPB.WorkerBuildOutput, error) {
 	repoWithBranch := fmt.Sprintf("%s-%s", cfg.Req.Name, cfg.Req.BranchName)
 	path := filepath.Join("..", repoWithBranch)
 	dir := filepath.Join(os.ExpandEnv(BuildPath), cfg.Req.Name)
@@ -47,7 +50,7 @@ func (s *WorkerBuilderServer) BuildRepo(cfg *syncPB.WorkerConfig) *syncPB.Worker
 	err := s.syncRepository(cfg)
 	if err != nil {
 		e := fmt.Sprintf("Error syncing repository: %s", err.Error())
-		return &syncPB.WorkerBuildOutput{WorkerName: cfg.WorkerName, Error: &syncPB.WorkerBuildError{Error: e}}
+		return &syncPB.WorkerBuildOutput{WorkerName: cfg.WorkerName, Error: &syncPB.WorkerBuildError{Error: e}}, err
 	}
 
 	branchName := strings.Split(cfg.Req.BranchRef, ":")[1]
@@ -60,7 +63,7 @@ func (s *WorkerBuilderServer) BuildRepo(cfg *syncPB.WorkerConfig) *syncPB.Worker
 	resp, err := s.provider.CreateWorkTree(ctx, &wrkTreeReq)
 	if resp.Error != nil || err != nil {
 		e := GetProtoWorkerError("Error creating work tree", err, resp)
-		return &syncPB.WorkerBuildOutput{WorkerName: cfg.WorkerName, Error: &syncPB.WorkerBuildError{Error: e}}
+		return &syncPB.WorkerBuildOutput{WorkerName: cfg.WorkerName, Error: &syncPB.WorkerBuildError{Error: e}}, err
 	}
 
 	cdToWrkTree := "cd " + filepath.Join(dir, path)
@@ -86,14 +89,87 @@ func (s *WorkerBuilderServer) BuildRepo(cfg *syncPB.WorkerConfig) *syncPB.Worker
 	b, err := c.CombinedOutput()
 	if err != nil {
 		e := GetProtoWorkerError("Error running commands", err, resp)
-		return &syncPB.WorkerBuildOutput{WorkerName: cfg.WorkerName, Output: string(b), Error: &syncPB.WorkerBuildError{Error: e}}
+		return &syncPB.WorkerBuildOutput{
+			WorkerName: cfg.WorkerName, Output: string(b),
+			Error: &syncPB.WorkerBuildError{Error: e},
+		}, err
 	}
-	resp, err = s.provider.RemoveWorkTree(ctx, &wrkTreeReq)
+	return &syncPB.WorkerBuildOutput{WorkerName: cfg.WorkerName, Output: string(b)}, nil
+}
+
+func (s *WorkerBuilderServer) RemoveRepositoryWorkspace(ctx context.Context, cfg *syncPB.WorkerConfig) (*emptypb.Empty, error) {
+	dir := filepath.Join(os.ExpandEnv(BuildPath), cfg.Req.Name)
+	branchName := strings.Split(cfg.Req.BranchRef, ":")[1]
+	wrkTreeReq := providerPB.WorkTreeRequest{
+		Name:            cfg.WorkerName,
+		RepoDir:         dir,
+		BranchName:      branchName,
+		WorktreeRelPath: "../" + cfg.Req.Name + "-" + cfg.Req.BranchName,
+	}
+	resp, err := s.provider.RemoveWorkTree(ctx, &wrkTreeReq)
 	if err != nil {
 		e := GetProtoWorkerError("Error removing work tree", err, resp)
-		return &syncPB.WorkerBuildOutput{WorkerName: cfg.WorkerName, Error: &syncPB.WorkerBuildError{Error: e}}
+		return nil, errors.New(e)
 	}
-	return &syncPB.WorkerBuildOutput{WorkerName: cfg.WorkerName, Output: string(b)}
+	return nil, nil
+}
+
+func (wb *WorkersBuilder) RemoveAllRepositoryWorkspaces() []error {
+	dir := filepath.Join(os.ExpandEnv(BuildPath), wb.Name)
+	errs := []error{}
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	logger.Printf("wg added %d @RemoveAllRepositoryWorkspaces", len(wb.RunsOn))
+	wg.Add(len(wb.RunsOn))
+
+	for _, ep := range wb.RunsOn {
+		addr := formatAddress(ep)
+		go func() {
+			defer logger.Println("wg done in @RemoveAllRepositoryWorkspaces")
+			defer wg.Done()
+			conn, err := grpc.CreateNewClientConnection(addr)
+			if err != nil {
+				e := GetProtoWorkerError("Error creating new client connection", err, nil)
+				ConcurrentAppendToArray(&mu, errors.New(e), &errs)
+			}
+			defer conn.Close()
+
+			workerCfg, s := wb.getWorkerConfig(conn, ep.Name, dir)
+			ctx := context.Background()
+			_, err = s.RemoveRepositoryWorkspace(ctx, workerCfg)
+			ConcurrentAppendToArray(&mu, err, &errs)
+		}()
+	}
+	wg.Wait()
+	return errs
+
+}
+
+func (wb *WorkersBuilder) getWorkerConfig(conn *googleGrpc.ClientConn, workerName, dir string) (
+	*syncPB.WorkerConfig, WorkerBuilderServer) {
+	providerClient := providerPB.NewRepositoryProviderClient(conn)
+	s := WorkerBuilderServer{provider: providerClient}
+	workerCfg := syncPB.WorkerConfig{
+		WorkerName: workerName,
+		Req: &providerPB.SyncRequest{
+			Name:         wb.Name,
+			Dir:          dir,
+			CloneUrl:     wb.CloneURL,
+			BranchName:   wb.BranchName,
+			RemoteOrigin: wb.Remote,
+			Token:        wb.Token,
+			BranchRef:    wb.BranchRef,
+		},
+		BuildSteps: wb.Steps,
+	}
+	return &workerCfg, s
+}
+
+func formatAddress(ep config.EndpointInfo) string {
+	if ep.Port == 0 {
+		return ep.Host
+	}
+	return fmt.Sprintf("%s:%d", ep.Host, ep.Port)
 }
 
 func (wb *WorkersBuilder) BuildAllEndpoints() []*syncPB.WorkerBuildOutput {
@@ -102,46 +178,37 @@ func (wb *WorkersBuilder) BuildAllEndpoints() []*syncPB.WorkerBuildOutput {
 
 	var wg sync.WaitGroup
 	var mu sync.Mutex
+	logger.Printf("wg added %d @BuildAllEndpoints", len(wb.RunsOn))
 	wg.Add(len(wb.RunsOn))
-	appendToOutput := func(output *syncPB.WorkerBuildOutput) {
-		mu.Lock()
-		outputs = append(outputs, output)
-		mu.Unlock()
-	}
 
 	for _, ep := range wb.RunsOn {
-		var addr string
-		if ep.Port == 0 {
-			addr = ep.Host
-		} else {
-			addr = fmt.Sprintf("%s:%d", ep.Host, ep.Port)
-		}
+		addr := formatAddress(ep)
 		go func() {
+			defer logger.Println("wg done in @BuildAllEndpoints")
 			defer wg.Done()
 			conn, err := grpc.CreateNewClientConnection(addr)
 			if err != nil {
 				e := GetProtoWorkerError("Error creating new client connection", err, nil)
-				appendToOutput(&syncPB.WorkerBuildOutput{WorkerName: ep.Name, Error: &syncPB.WorkerBuildError{Error: e}})
+				ConcurrentAppendToArray(
+					&mu,
+					&syncPB.WorkerBuildOutput{WorkerName: ep.Name, Error: &syncPB.WorkerBuildError{Error: e}},
+					&outputs,
+				)
 			}
 			defer conn.Close()
 
-			providerClient := providerPB.NewRepositoryProviderClient(conn)
-			s := WorkerBuilderServer{provider: providerClient}
-			workerCfg := syncPB.WorkerConfig{
-				WorkerName: ep.Name,
-				Req: &providerPB.SyncRequest{
-					Name:         wb.Name,
-					Dir:          dir,
-					CloneUrl:     wb.CloneURL,
-					BranchName:   wb.BranchName,
-					RemoteOrigin: wb.Remote,
-					Token:        wb.Token,
-					BranchRef:    wb.BranchRef,
-				},
-				BuildSteps: wb.Steps,
+			workerCfg, s := wb.getWorkerConfig(conn, ep.Name, dir)
+			ctx := context.Background()
+			output, err := s.BuildRepository(ctx, workerCfg)
+			if err != nil {
+				e := GetProtoWorkerError("Error Building repository", err, nil)
+				ConcurrentAppendToArray(
+					&mu,
+					&syncPB.WorkerBuildOutput{WorkerName: ep.Name, Error: &syncPB.WorkerBuildError{Error: e}},
+					&outputs,
+				)
 			}
-			output := s.BuildRepo(&workerCfg)
-			appendToOutput(output)
+			ConcurrentAppendToArray(&mu, output, &outputs)
 		}()
 	}
 	wg.Wait()

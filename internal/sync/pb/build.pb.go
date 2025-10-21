@@ -10,6 +10,7 @@ import (
 	pb "github.com/ImTheCurse/ConflowCI/internal/provider/pb"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -190,7 +191,7 @@ var File_sync_build_proto protoreflect.FileDescriptor
 
 const file_sync_build_proto_rawDesc = "" +
 	"\n" +
-	"\x10sync/build.proto\x12\x04sync\x1a\x17provider/provider.proto\"y\n" +
+	"\x10sync/build.proto\x12\x04sync\x1a\x17provider/provider.proto\x1a\x1bgoogle/protobuf/empty.proto\"y\n" +
 	"\fWorkerConfig\x12\x1f\n" +
 	"\vworker_name\x18\x01 \x01(\tR\n" +
 	"workerName\x12'\n" +
@@ -204,9 +205,10 @@ const file_sync_build_proto_rawDesc = "" +
 	"\x06Output\x18\x02 \x01(\tR\x06Output\x12,\n" +
 	"\x05error\x18\x03 \x01(\v2\x16.sync.WorkerBuildErrorR\x05error\"(\n" +
 	"\x10WorkerBuildError\x12\x14\n" +
-	"\x05Error\x18\x01 \x01(\tR\x05Error2O\n" +
+	"\x05Error\x18\x01 \x01(\tR\x05Error2\x98\x01\n" +
 	"\rWorkerBuilder\x12>\n" +
-	"\x0fBuildRepository\x12\x12.sync.WorkerConfig\x1a\x17.sync.WorkerBuildOutputB2Z0github.com/ImTheCurse/ConflowCI/internal/sync/pbb\x06proto3"
+	"\x0fBuildRepository\x12\x12.sync.WorkerConfig\x1a\x17.sync.WorkerBuildOutput\x12G\n" +
+	"\x19RemoveRepositoryWorkspace\x12\x12.sync.WorkerConfig\x1a\x16.google.protobuf.EmptyB2Z0github.com/ImTheCurse/ConflowCI/internal/sync/pbb\x06proto3"
 
 var (
 	file_sync_build_proto_rawDescOnce sync.Once
@@ -226,14 +228,17 @@ var file_sync_build_proto_goTypes = []any{
 	(*WorkerBuildOutput)(nil), // 1: sync.WorkerBuildOutput
 	(*WorkerBuildError)(nil),  // 2: sync.WorkerBuildError
 	(*pb.SyncRequest)(nil),    // 3: provider.SyncRequest
+	(*emptypb.Empty)(nil),     // 4: google.protobuf.Empty
 }
 var file_sync_build_proto_depIdxs = []int32{
 	3, // 0: sync.WorkerConfig.req:type_name -> provider.SyncRequest
 	2, // 1: sync.WorkerBuildOutput.error:type_name -> sync.WorkerBuildError
 	0, // 2: sync.WorkerBuilder.BuildRepository:input_type -> sync.WorkerConfig
-	1, // 3: sync.WorkerBuilder.BuildRepository:output_type -> sync.WorkerBuildOutput
-	3, // [3:4] is the sub-list for method output_type
-	2, // [2:3] is the sub-list for method input_type
+	0, // 3: sync.WorkerBuilder.RemoveRepositoryWorkspace:input_type -> sync.WorkerConfig
+	1, // 4: sync.WorkerBuilder.BuildRepository:output_type -> sync.WorkerBuildOutput
+	4, // 5: sync.WorkerBuilder.RemoveRepositoryWorkspace:output_type -> google.protobuf.Empty
+	4, // [4:6] is the sub-list for method output_type
+	2, // [2:4] is the sub-list for method input_type
 	2, // [2:2] is the sub-list for extension type_name
 	2, // [2:2] is the sub-list for extension extendee
 	0, // [0:2] is the sub-list for field type_name

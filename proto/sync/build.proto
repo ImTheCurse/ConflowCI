@@ -3,9 +3,11 @@ syntax = "proto3";
 package sync;
 option go_package = "github.com/ImTheCurse/ConflowCI/internal/sync/pb";
 import "provider/provider.proto";
+import "google/protobuf/empty.proto";
 
 service WorkerBuilder{
     rpc BuildRepository(WorkerConfig)returns(WorkerBuildOutput);
+    rpc RemoveRepositoryWorkspace(WorkerConfig)returns(google.protobuf.Empty);
 }
 
 message WorkerConfig{

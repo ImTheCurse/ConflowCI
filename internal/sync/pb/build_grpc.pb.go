@@ -11,6 +11,7 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -19,7 +20,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	WorkerBuilder_BuildRepository_FullMethodName = "/sync.WorkerBuilder/BuildRepository"
+	WorkerBuilder_BuildRepository_FullMethodName           = "/sync.WorkerBuilder/BuildRepository"
+	WorkerBuilder_RemoveRepositoryWorkspace_FullMethodName = "/sync.WorkerBuilder/RemoveRepositoryWorkspace"
 )
 
 // WorkerBuilderClient is the client API for WorkerBuilder service.
@@ -27,6 +29,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type WorkerBuilderClient interface {
 	BuildRepository(ctx context.Context, in *WorkerConfig, opts ...grpc.CallOption) (*WorkerBuildOutput, error)
+	RemoveRepositoryWorkspace(ctx context.Context, in *WorkerConfig, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type workerBuilderClient struct {
@@ -47,11 +50,22 @@ func (c *workerBuilderClient) BuildRepository(ctx context.Context, in *WorkerCon
 	return out, nil
 }
 
+func (c *workerBuilderClient) RemoveRepositoryWorkspace(ctx context.Context, in *WorkerConfig, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, WorkerBuilder_RemoveRepositoryWorkspace_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // WorkerBuilderServer is the server API for WorkerBuilder service.
 // All implementations should embed UnimplementedWorkerBuilderServer
 // for forward compatibility.
 type WorkerBuilderServer interface {
 	BuildRepository(context.Context, *WorkerConfig) (*WorkerBuildOutput, error)
+	RemoveRepositoryWorkspace(context.Context, *WorkerConfig) (*emptypb.Empty, error)
 }
 
 // UnimplementedWorkerBuilderServer should be embedded to have
@@ -63,6 +77,9 @@ type UnimplementedWorkerBuilderServer struct{}
 
 func (UnimplementedWorkerBuilderServer) BuildRepository(context.Context, *WorkerConfig) (*WorkerBuildOutput, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method BuildRepository not implemented")
+}
+func (UnimplementedWorkerBuilderServer) RemoveRepositoryWorkspace(context.Context, *WorkerConfig) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RemoveRepositoryWorkspace not implemented")
 }
 func (UnimplementedWorkerBuilderServer) testEmbeddedByValue() {}
 
@@ -102,6 +119,24 @@ func _WorkerBuilder_BuildRepository_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _WorkerBuilder_RemoveRepositoryWorkspace_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(WorkerConfig)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WorkerBuilderServer).RemoveRepositoryWorkspace(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WorkerBuilder_RemoveRepositoryWorkspace_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WorkerBuilderServer).RemoveRepositoryWorkspace(ctx, req.(*WorkerConfig))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // WorkerBuilder_ServiceDesc is the grpc.ServiceDesc for WorkerBuilder service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -112,6 +147,10 @@ var WorkerBuilder_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "BuildRepository",
 			Handler:    _WorkerBuilder_BuildRepository_Handler,
+		},
+		{
+			MethodName: "RemoveRepositoryWorkspace",
+			Handler:    _WorkerBuilder_RemoveRepositoryWorkspace_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

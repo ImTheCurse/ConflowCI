@@ -2,6 +2,7 @@ package sync
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/ImTheCurse/ConflowCI/internal/provider/pb"
 )
@@ -14,4 +15,10 @@ func GetProtoWorkerError(prefix string, err error, resp *pb.SyncResponse) string
 		return fmt.Sprintf("%s: Worker build error: proto server error: %v", prefix, err)
 	}
 	return ""
+}
+
+func ConcurrentAppendToArray[T any](mu *sync.Mutex, val T, arr *[]T) {
+	mu.Lock()
+	*arr = append(*arr, val)
+	mu.Unlock()
 }

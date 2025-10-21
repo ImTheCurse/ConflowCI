@@ -2,8 +2,8 @@ package sync
 
 import (
 	"context"
-	"fmt"
 	"os/exec"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -16,7 +16,7 @@ import (
 // Creates a new task executor, the task executor is responsible for executing tasks on a remote machine
 // it dispatches each cmd with file/pattern to a remote machine in a concurrent way using the RunTaskOnAllMachines func.
 // there is no guarantee that the commands will be executed in the order they were dispatched.
-func NewTaskExecutor(cfg config.ValidatedConfig, task config.TaskConsumerJobs) (*TaskExecutor, error) {
+func NewTaskExecutor(cfg config.ValidatedConfig, task config.TaskConsumerJobs, wsName string) (*TaskExecutor, error) {
 	ctx := context.Background()
 	files := []string{}
 	var err error
@@ -39,7 +39,8 @@ func NewTaskExecutor(cfg config.ValidatedConfig, task config.TaskConsumerJobs) (
 		files = f.Files
 	} else {
 		for _, file := range task.File {
-			filesWithPath := fmt.Sprintf("%s/%s", BuildPath, file)
+			filesWithPath := filepath.Join(BuildPath, wsName, file)
+			// filesWithPath := fmt.Sprintf("%s/%s", BuildPath, file)
 			files = append(files, filesWithPath)
 		}
 	}
