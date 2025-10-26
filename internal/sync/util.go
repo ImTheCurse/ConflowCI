@@ -8,6 +8,9 @@ import (
 )
 
 func GetProtoWorkerError(prefix string, err error, resp *pb.SyncResponse) string {
+	if resp == nil {
+		return fmt.Sprintf("%s: Worker build error: %v", prefix, err)
+	}
 	if resp.Error != nil {
 		return fmt.Sprintf("%s: Worket build error: %s", prefix, resp.Error.Reason)
 	}

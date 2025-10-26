@@ -76,7 +76,7 @@ func getTasksMachine(cfg config.ValidatedConfig, task config.TaskConsumerJobs) [
 	return res
 }
 
-func GetFilesByRegex(ctx context.Context, finder *pb.TaskFileFinder) (*pb.FileList, error) {
+func (te *TaskExecutorServer) GetFilesByRegex(ctx context.Context, finder *pb.TaskFileFinder) (*pb.FileList, error) {
 	cmd := exec.Command(
 		"find",
 		finder.BuildDir,

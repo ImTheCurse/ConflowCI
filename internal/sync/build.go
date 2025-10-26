@@ -119,7 +119,6 @@ func (wb *WorkersBuilder) RemoveAllRepositoryWorkspaces() []error {
 	errs := []error{}
 	var wg sync.WaitGroup
 	var mu sync.Mutex
-	logger.Printf("wg added %d @RemoveAllRepositoryWorkspaces", len(wb.RunsOn))
 	wg.Add(len(wb.RunsOn))
 
 	for _, ep := range wb.RunsOn {
@@ -178,7 +177,6 @@ func (wb *WorkersBuilder) BuildAllEndpoints() []*syncPB.WorkerBuildOutput {
 
 	var wg sync.WaitGroup
 	var mu sync.Mutex
-	logger.Printf("wg added %d @BuildAllEndpoints", len(wb.RunsOn))
 	wg.Add(len(wb.RunsOn))
 
 	for _, ep := range wb.RunsOn {

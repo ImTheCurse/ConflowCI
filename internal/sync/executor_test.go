@@ -35,8 +35,8 @@ func TestGetFilesByRegex(t *testing.T) {
 		Pattern:  expr,
 		BuildDir: tempDir,
 	}
-
-	files, err := GetFilesByRegex(ctx, &finder)
+	tes := TaskExecutorServer{}
+	files, err := tes.GetFilesByRegex(ctx, &finder)
 	if err != nil {
 		t.Errorf("Failed to get files by regex: %v", err)
 	}

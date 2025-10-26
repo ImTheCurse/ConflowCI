@@ -85,6 +85,8 @@ type TaskExecutor struct {
 	Errors  []string
 }
 
+type TaskExecutorServer struct{}
+
 type WorkerBuilderServer struct {
 	provider providerPB.RepositoryProviderClient
 }

@@ -21,7 +21,6 @@ func (te *TaskExecutor) RunTaskOnAllMachines() error {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	var wg sync.WaitGroup
-	logger.Printf("wg added %d @RunTaskOnAllMachines", len(te.Cmds))
 	wg.Add(len(te.Cmds))
 
 	params := mq.ConsumerParams{
@@ -121,7 +120,6 @@ func (te *TaskExecutor) RunTaskOnAllMachines() error {
 
 	var cmdResWg sync.WaitGroup
 	cmdResWg.Add(len(te.Cmds))
-	logger.Printf("cmdResWg added %d @RunTaskOnAllMachines", len(te.Cmds))
 	go func() {
 		// wait until all commands outputs/errors finish reading from queue
 		cmdResWg.Wait()

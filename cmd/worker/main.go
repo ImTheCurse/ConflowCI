@@ -16,13 +16,14 @@ import (
 	syncPB "github.com/ImTheCurse/ConflowCI/internal/sync/pb"
 	grpcUtil "github.com/ImTheCurse/ConflowCI/pkg/grpc"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 var logger = log.New(os.Stdout, "[Worker Main]: ", log.Lshortfile|log.LstdFlags)
 
 var (
 	port = flag.Int("port", 8918, "port to listen on")
-	host = flag.String("addr", "localhost", "address to connect to")
+	host = flag.String("addr", "", "address to connect to")
 )
 
 func main() {
@@ -34,13 +35,24 @@ func main() {
 	if err != nil {
 		logger.Fatalf("Failed to listen on port %d", *port)
 	}
-	server := grpc.NewServer()
+	tlsCfg, err := grpcUtil.GetWorkerTLSConfig(
+		grpcUtil.CAPath,
+		grpcUtil.ServerCertificatePath,
+		grpcUtil.ServerKeyPath,
+	)
+	if err != nil {
+		logger.Fatalf("Failed to get TLS config: %v", err)
+	}
+	creds := credentials.NewTLS(tlsCfg)
+	server := grpc.NewServer(grpc.Creds(creds))
 
 	logger.Printf("Registering services...")
 	providerPB.RegisterRepositoryProviderServer(server, &github.GitRepoReader{})
 
 	// Connect to the local machine, since the worker execute a gRPC method locally
 	// and was defined to connect to client.
+	// it is okay to connect to the raw tcp connection before
+	// running the server, since it blocks until the gRPC server starts.
 	conn, err := grpcUtil.CreateNewClientConnection(addr)
 	if err != nil {
 		logger.Fatalf("Failed to create client connection: %v", err)
@@ -49,8 +61,7 @@ func main() {
 	wbs := sync.NewWorkerBuilderServer(client)
 	syncPB.RegisterWorkerBuilderServer(server, wbs)
 	mqpb.RegisterConsumerServicerServer(server, &mq.ConsumerServer{})
-	// TODO:
-	// syncPB.RegisterFileExtractorServer(server,sync)
+	syncPB.RegisterFileExtractorServer(server, &sync.TaskExecutorServer{})
 
 	logger.Printf("gRPC server Listening on port %d", *port)
 	if err := server.Serve(lis); err != nil {
